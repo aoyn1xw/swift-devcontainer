@@ -7,7 +7,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   libssl-dev libminizip-dev \
   && rm -rf /var/lib/apt/lists/*
 
-# Force rebuild from here - updated 2026-02-11
+# Bust cache - build 002
+ARG CACHEBUST=002
 COPY install-tools.sh /usr/local/bin/install-tools.sh
 
 RUN chmod +x /usr/local/bin/install-tools.sh \
