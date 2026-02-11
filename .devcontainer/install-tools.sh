@@ -43,3 +43,7 @@ cd "$build"
 rm -rf zsign
 
 rm -rf "$build"
+
+echo "=== INSTALLED BINARIES ==="
+ls -l /usr/local/bin | grep -E 'xtool|zsign|swift' || exit 1
+
