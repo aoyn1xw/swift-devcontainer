@@ -40,7 +40,7 @@ RUN set -eux; \
   \
   # --- xtool (iOS cross-compile) --- \
   echo "=== Building xtool ==="; \
-  git clone --depth 1 --branch "v1.16.1" https://github.com/xtool-org/xtool.git xtool; \
+  git clone --depth 1 --branch "1.16.1" https://github.com/xtool-org/xtool.git xtool; \
   cd xtool; \
   swift build -c release -j "$jobs"; \
   install -m 0755 .build/release/xtool "$prefix/bin/xtool"; \
