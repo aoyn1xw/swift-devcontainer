@@ -27,6 +27,11 @@ EOF
 . "$swiftly_home/env.sh"
 swiftly install latest --use
 
+# Also add to vscode user's bashrc for non-login shells
+if [ -d "/home/vscode" ]; then
+  echo 'source /usr/local/share/swiftly/env.sh' >> /home/vscode/.bashrc
+fi
+
 git clone --depth 1 --branch "v1.16.1" https://github.com/xtool-org/xtool.git xtool
 cd xtool
 swift build -c release -j "$jobs"

@@ -11,5 +11,6 @@
       ]
     }
   },
+  "postCreateCommand": "echo 'source /usr/local/share/swiftly/env.sh' >> ~/.bashrc",
   "remoteUser": "vscode"
 }
