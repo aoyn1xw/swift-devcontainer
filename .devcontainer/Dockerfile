@@ -12,6 +12,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install Swift via swiftly + build xtool & zsign (all in one layer)
 RUN set -eux; \
   export DEBIAN_FRONTEND=noninteractive; \
+  apt-get update && apt-get install -y --no-install-recommends \
+    libncurses-dev libpython3-dev libxml2-dev libz3-dev \
+  && rm -rf /var/lib/apt/lists/*; \
   jobs="$(nproc)"; \
   prefix="/usr/local"; \
   swiftly_home="/usr/local/share/swiftly"; \
