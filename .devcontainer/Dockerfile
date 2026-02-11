@@ -1,11 +1,12 @@
 FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 
-# Install build dependencies
+# Install build dependencies + Swift runtime deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
   git curl ca-certificates tar xz-utils \
   build-essential g++ pkg-config \
   cmake ninja-build \
   libssl-dev libminizip-dev \
+  libncurses-dev libpython3-dev libxml2-dev libz3-dev \
   && rm -rf /var/lib/apt/lists/*
 
 # Install Swift via swiftly + build xtool & zsign (all in one layer)
