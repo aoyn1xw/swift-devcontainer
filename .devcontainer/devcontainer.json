@@ -1,10 +1,7 @@
 {
   "name": "xtool-zsign-swift",
-  "build": { 
-    "dockerfile": "Dockerfile",
-    "args": {
-      "CACHEBUST": "002"
-    }
+  "build": {
+    "dockerfile": "Dockerfile"
   },
   "customizations": {
     "vscode": {
