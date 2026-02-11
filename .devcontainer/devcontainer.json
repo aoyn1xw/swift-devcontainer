@@ -1,0 +1,15 @@
+{
+  "name": "xtool-zsign-swift",
+  "build": { "dockerfile": "Dockerfile" },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "sswg.swift-lang",
+        "vadimcn.vscode-lldb",
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools"
+      ]
+    }
+  },
+  "remoteUser": "vscode"
+}
