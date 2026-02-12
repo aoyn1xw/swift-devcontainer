@@ -48,15 +48,18 @@ RUN set -eux; \
   xtool --help
 
 # ------------------------------------------------------------
-# zsign (build from source)
+# zsign (build from source with better error handling)
 # ------------------------------------------------------------
 RUN set -eux; \
   git clone https://github.com/zhlynn/zsign.git /tmp/zsign; \
+  cd /tmp/zsign; \
+  git submodule update --init --recursive || true; \
   cd /tmp/zsign/build/linux; \
-  make clean && make; \
+  make clean || true; \
+  make -j$(nproc) && \
   install -m 0755 zsign /usr/local/bin/zsign; \
   rm -rf /tmp/zsign; \
-  zsign
+  zsign --help || zsign
 
 # ------------------------------------------------------------
 # Theos
@@ -78,4 +81,4 @@ RUN set -eux; \
 # ------------------------------------------------------------
 # Final sanity check
 # ------------------------------------------------------------
-RUN swift --version && xtool --help && zsign && test -d /opt/theos
+RUN swift --version && xtool --help && (zsign --help || zsign) && test -d /opt/theos
