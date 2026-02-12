@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   libssl-dev libminizip-dev liblzma-dev \
   usbmuxd libimobiledevice-utils \
   fuse libfuse2 \
+  bash sudo \
   && rm -rf /var/lib/apt/lists/*
 
 # ------------------------------------------------------------
@@ -51,6 +52,12 @@ RUN set -eux; \
   zsign
 
 # ------------------------------------------------------------
+# Theos (cross-platform build system for iOS/macOS/Linux/Windows)
+# ------------------------------------------------------------
+RUN set -eux; \
+  bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
+
+# ------------------------------------------------------------
 # Environment setup
 # ------------------------------------------------------------
 RUN set -eux; \
@@ -58,9 +65,10 @@ RUN set -eux; \
     echo ''; \
     echo '# Swift and tools environment'; \
     echo 'export PATH="/usr/local/bin:$PATH"'; \
+    echo 'export THEOS=/opt/theos'; \
   } >> /etc/bash.bashrc
 
 # ------------------------------------------------------------
 # Final sanity check
 # ------------------------------------------------------------
-RUN swift --version && xtool --help && zsign
+RUN swift --version && xtool --help && zsign && test -d /opt/theos
