@@ -5,18 +5,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   git curl ca-certificates tar xz-utils \
   build-essential g++ pkg-config \
   cmake ninja-build \
-  libssl-dev libminizip-dev \
+  libssl-dev libminizip-dev liblzma-dev \
+  libncurses-dev libpython3-dev libxml2-dev libz3-dev \
   libimobiledevice-dev libplist-dev libusbmuxd-dev \
-  libncurses-dev libpython3-dev libxml2-dev libz3-dev liblzma-dev \
   && rm -rf /var/lib/apt/lists/*
-
 
 # Install Swift via swiftly + build xtool & zsign (all in one layer)
 RUN set -eux; \
   export DEBIAN_FRONTEND=noninteractive; \
-  apt-get update && apt-get install -y --no-install-recommends \
-    libncurses-dev libpython3-dev libxml2-dev libz3-dev \
-  && rm -rf /var/lib/apt/lists/*; \
   jobs="$(nproc)"; \
   prefix="/usr/local"; \
   swiftly_home="/usr/local/share/swiftly"; \
@@ -71,7 +67,7 @@ RUN set -eux; \
   { echo ''; \
     echo 'export SWIFTLY_HOME_DIR="/usr/local/share/swiftly"'; \
     echo 'export PATH="$SWIFTLY_HOME_DIR/bin:/usr/local/bin:$PATH"'; \
-    echo '[ -f "$SWIFTLY_HOME_DIR/env.sh" ] && . "$SWIFTLY_HOME_DIR/env.sh"'; \
+    echo '[ -f "$SWIFTLY_HOME_DIR/env.sh" ] && . "$SWIFTLY_HOME/env.sh"'; \
   } > /etc/profile.d/swiftly.sh; \
   \
   # --- verify --- \
