@@ -48,23 +48,13 @@ RUN set -eux; \
   xtool --help
 
 # ------------------------------------------------------------
-# zsign (build from source - simplified with error handling)
+# zsign (build from source)
 # ------------------------------------------------------------
 RUN set -eux; \
   git clone https://github.com/zhlynn/zsign.git /tmp/zsign; \
-  cd /tmp/zsign; \
-  git submodule update --init --recursive; \
-  cd /tmp/zsign; \
-  g++ -std=c++11 -o zsign *.cpp common/*.cpp -I. -Icommon -lssl -lcrypto -lz -lpthread || \
-  (cd /tmp/zsign/build/linux && make -j$(nproc)); \
-  if [ -f /tmp/zsign/zsign ]; then \
-    install -m 0755 /tmp/zsign/zsign /usr/local/bin/zsign; \
-  elif [ -f /tmp/zsign/build/linux/zsign ]; then \
-    install -m 0755 /tmp/zsign/build/linux/zsign /usr/local/bin/zsign; \
-  else \
-    echo "ERROR: zsign binary not found after build"; \
-    exit 1; \
-  fi; \
+  cd /tmp/zsign/build/linux; \
+  make clean && make; \
+  install -m 0755 zsign /usr/local/bin/zsign; \
   rm -rf /tmp/zsign; \
   zsign || true
 
