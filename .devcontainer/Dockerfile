@@ -1,9 +1,10 @@
 FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV NODE_VERSION=20
 
 # ------------------------------------------------------------
-# Base build deps
+# Base system + Node.js + build deps
 # ------------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
   git curl ca-certificates tar xz-utils \
@@ -14,6 +15,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   libncurses-dev libpython3-dev libxml2-dev libz3-dev \
   libusb-1.0-0-dev libreadline-dev \
   && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js LTS
+RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - && \
+    apt-get install -y nodejs && \
+    npm install -g typescript && \
+    node -v && npm -v && tsc -v
 
 # ------------------------------------------------------------
 # Swift via swiftly
@@ -48,7 +55,7 @@ RUN set -eux; \
     /usr/lib/x86_64-linux-gnu/libusbmuxd*
 
 # ------------------------------------------------------------
-# Build libimobiledevice stack from source (correct order)
+# Build libimobiledevice stack from source
 # ------------------------------------------------------------
 RUN set -eux; \
   jobs="$(nproc)"; \
@@ -59,7 +66,6 @@ RUN set -eux; \
   mkdir -p "$build"; \
   cd "$build"; \
   \
-  # libplist
   git clone --depth 1 --branch 2.6.0 https://github.com/libimobiledevice/libplist.git; \
   cd libplist; \
   ./autogen.sh --prefix="$prefix" --without-cython; \
@@ -67,7 +73,6 @@ RUN set -eux; \
   make install; \
   cd "$build"; rm -rf libplist; \
   \
-  # libimobiledevice-glue
   git clone --depth 1 --branch 1.3.0 https://github.com/libimobiledevice/libimobiledevice-glue.git; \
   cd libimobiledevice-glue; \
   ./autogen.sh --prefix="$prefix" --without-cython; \
@@ -75,7 +80,6 @@ RUN set -eux; \
   make install; \
   cd "$build"; rm -rf libimobiledevice-glue; \
   \
-  # libusbmuxd
   git clone --depth 1 --branch 2.1.0 https://github.com/libimobiledevice/libusbmuxd.git; \
   cd libusbmuxd; \
   ./autogen.sh --prefix="$prefix" --without-cython; \
@@ -83,7 +87,6 @@ RUN set -eux; \
   make install; \
   cd "$build"; rm -rf libusbmuxd; \
   \
-  # libimobiledevice
   git clone --depth 1 --branch 1.3.0 https://github.com/libimobiledevice/libimobiledevice.git; \
   cd libimobiledevice; \
   ./autogen.sh --prefix="$prefix" --without-cython; \
@@ -118,7 +121,7 @@ RUN set -eux; \
   rm -rf /tmp/zsign
 
 # ------------------------------------------------------------
-# Shell environment
+# Environment setup
 # ------------------------------------------------------------
 RUN set -eux; \
   { \
@@ -134,7 +137,4 @@ RUN set -eux; \
 # ------------------------------------------------------------
 # Final sanity check
 # ------------------------------------------------------------
-RUN set -eux; \
-  swift --version; \
-  xtool --help | head -1; \
-  zsign --help | head -1
+RUN node -v && npm -v && tsc -v && swift --version && xtool --help | head -1 && zsign --help | head -1
