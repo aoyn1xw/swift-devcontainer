@@ -1,5 +1,5 @@
 {
-  "name": "xtool-zsign-swift",
+  "name": "Swift iOS Dev Container (xtool + zsign + theos)",
   "build": {
     "dockerfile": "Dockerfile"
   },
@@ -10,8 +10,14 @@
         "vadimcn.vscode-lldb",
         "ms-vscode.cpptools",
         "ms-vscode.cmake-tools"
-      ]
+      ],
+      "settings": {
+        "swift.path": "/usr/local/bin/swift",
+        "lldb.library": "/usr/local/lib/liblldb.so"
+      }
     }
   },
-  "remoteUser": "vscode"
+  "remoteUser": "vscode",
+  "features": {},
+  "postCreateCommand": "swift --version && xtool --help && zsign && echo 'THEOS='$THEOS"
 }
