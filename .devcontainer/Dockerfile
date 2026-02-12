@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   build-essential g++ pkg-config \
   cmake ninja-build \
   libssl-dev libminizip-dev \
-  libncurses-dev libpython3-dev libxml2-dev libz3-dev \
+  libncurses-dev libpython3-dev libxml2-dev libz3-dev liblzma-dev \
   && rm -rf /var/lib/apt/lists/*
 
 # Install Swift via swiftly + build xtool & zsign (all in one layer)
