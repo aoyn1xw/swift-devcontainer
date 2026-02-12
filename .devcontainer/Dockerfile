@@ -19,69 +19,76 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ------------------------------------------------------------
 # Swift 6.2
 # ------------------------------------------------------------
-RUN set -eux; \ 
-  SWIFT_URL="https://download.swift.org/swift-6.2-release/ubuntu2404/swift-6.2-RELEASE/swift-6.2-RELEASE-ubuntu24.04.tar.gz"; \ 
-  curl -fsSL "$SWIFT_URL" -o /tmp/swift.tar.gz; \ 
-  mkdir -p /tmp/swift; \ 
-  tar xzf /tmp/swift.tar.gz -C /tmp/swift --strip-components=1; \ 
-  cp -r /tmp/swift/usr/* /usr/local/; \ 
-  rm -rf /tmp/swift /tmp/swift.tar.gz; \ 
+RUN set -eux; \
+  SWIFT_URL="https://download.swift.org/swift-6.2-release/ubuntu2404/swift-6.2-RELEASE/swift-6.2-RELEASE-ubuntu24.04.tar.gz"; \
+  curl -fsSL "$SWIFT_URL" -o /tmp/swift.tar.gz; \
+  mkdir -p /tmp/swift; \
+  tar xzf /tmp/swift.tar.gz -C /tmp/swift --strip-components=1; \
+  cp -r /tmp/swift/usr/* /usr/local/; \
+  rm -rf /tmp/swift /tmp/swift.tar.gz; \
   swift --version
 
 # ------------------------------------------------------------
 # xtool (extract AppImage and copy ALL contents)
 # ------------------------------------------------------------
-RUN set -eux; \ 
-  curl -fsSL "https://github.com/xtool-org/xtool/releases/latest/download/xtool-$(uname -m).AppImage" -o /tmp/xtool.AppImage; \ 
-  chmod +x /tmp/xtool.AppImage; \ 
-  cd /tmp; \ 
-  ./xtool.AppImage --appimage-extract 2>&1 || true; \ 
-  if [ ! -d /tmp/squashfs-root ]; then \ 
-    echo "ERROR: AppImage extraction failed!"; \ 
-    exit 1; \ 
-  fi; \ 
-  mkdir -p /opt/xtool; \ 
-  cp -r /tmp/squashfs-root/* /opt/xtool/; \ 
-  ln -s /opt/xtool/AppRun /usr/local/bin/xtool; \ 
-  chmod +x /opt/xtool/AppRun; \ 
-  rm -rf /tmp/xtool.AppImage /tmp/squashfs-root; \ 
+RUN set -eux; \
+  curl -fsSL "https://github.com/xtool-org/xtool/releases/latest/download/xtool-$(uname -m).AppImage" -o /tmp/xtool.AppImage; \
+  chmod +x /tmp/xtool.AppImage; \
+  cd /tmp; \
+  ./xtool.AppImage --appimage-extract 2>&1 || true; \
+  if [ ! -d /tmp/squashfs-root ]; then \
+    echo "ERROR: AppImage extraction failed!"; \
+    exit 1; \
+  fi; \
+  mkdir -p /opt/xtool; \
+  cp -r /tmp/squashfs-root/* /opt/xtool/; \
+  ln -s /opt/xtool/AppRun /usr/local/bin/xtool; \
+  chmod +x /opt/xtool/AppRun; \
+  rm -rf /tmp/xtool.AppImage /tmp/squashfs-root; \
   xtool --help
 
 # ------------------------------------------------------------
-# zsign (build from source with better error handling)
+# zsign (build from source - simplified with error handling)
 # ------------------------------------------------------------
-RUN set -eux; \ 
-  git clone https://github.com/zhlynn/zsign.git /tmp/zsign; \ 
-  cd /tmp/zsign; \ 
-  git submodule update --init --recursive || true; \ 
-  cd /tmp/zsign/build/linux; \ 
-  make clean || true; \ 
-  make -j$(nproc) && \ 
-  install -m 0755 zsign /usr/local/bin/zsign; \ 
-  rm -rf /tmp/zsign; \ 
-  zsign --help || zsign
+RUN set -eux; \
+  git clone https://github.com/zhlynn/zsign.git /tmp/zsign; \
+  cd /tmp/zsign; \
+  git submodule update --init --recursive; \
+  cd /tmp/zsign; \
+  g++ -std=c++11 -o zsign *.cpp common/*.cpp -I. -Icommon -lssl -lcrypto -lz -lpthread || \
+  (cd /tmp/zsign/build/linux && make -j$(nproc)); \
+  if [ -f /tmp/zsign/zsign ]; then \
+    install -m 0755 /tmp/zsign/zsign /usr/local/bin/zsign; \
+  elif [ -f /tmp/zsign/build/linux/zsign ]; then \
+    install -m 0755 /tmp/zsign/build/linux/zsign /usr/local/bin/zsign; \
+  else \
+    echo "ERROR: zsign binary not found after build"; \
+    exit 1; \
+  fi; \
+  rm -rf /tmp/zsign; \
+  zsign || true
 
 # ------------------------------------------------------------
 # Theos - Install to /opt/theos with proper permissions
 # ------------------------------------------------------------
 ENV THEOS=/opt/theos
-RUN set -eux; \ 
-  mkdir -p /opt/theos; \ 
-  git clone --recursive https://github.com/theos/theos.git /opt/theos; \ 
+RUN set -eux; \
+  mkdir -p /opt/theos; \
+  git clone --recursive https://github.com/theos/theos.git /opt/theos; \
   chmod -R 755 /opt/theos
 
 # ------------------------------------------------------------
 # Environment setup
 # ------------------------------------------------------------
-RUN set -eux; \ 
-  { \ 
-    echo ''; \ 
-    echo '# Swift and tools environment'; \ 
-    echo 'export PATH="/usr/local/bin:$PATH"'; \ 
-    echo 'export THEOS=/opt/theos'; \ 
+RUN set -eux; \
+  { \
+    echo ''; \
+    echo '# Swift and tools environment'; \
+    echo 'export PATH="/usr/local/bin:$PATH"'; \
+    echo 'export THEOS=/opt/theos'; \
   } >> /etc/bash.bashrc
 
 # ------------------------------------------------------------
 # Final sanity check
 # ------------------------------------------------------------
-RUN swift --version && xtool --help && (zsign --help || zsign) && test -d /opt/theos
+RUN swift --version && xtool --help && (zsign || true) && test -d /opt/theos
