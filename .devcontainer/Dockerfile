@@ -55,8 +55,7 @@ RUN set -eux; \
   cd /tmp/zsign/build/linux; \
   make clean && make; \
   install -m 0755 zsign /usr/local/bin/zsign; \
-  rm -rf /tmp/zsign; \
-  zsign || true
+  rm -rf /tmp/zsign
 
 # ------------------------------------------------------------
 # Theos - Install to /opt/theos with proper permissions
@@ -81,4 +80,4 @@ RUN set -eux; \
 # ------------------------------------------------------------
 # Final sanity check
 # ------------------------------------------------------------
-RUN swift --version && xtool --help && (zsign || true) && test -d /opt/theos
+RUN swift --version && xtool --help && which zsign && test -d /opt/theos
