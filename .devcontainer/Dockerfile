@@ -87,6 +87,13 @@ RUN set -eux; \
   make install; \
   cd "$build"; rm -rf libusbmuxd; \
   \
+  git clone --depth 1 --branch 1.0.3 https://github.com/libimobiledevice/libtatsu.git; \
+  cd libtatsu; \
+  ./autogen.sh --prefix="$prefix" --without-cython; \
+  make -j "$jobs"; \
+  make install; \
+  cd "$build"; rm -rf libtatsu; \
+  \
   git clone --depth 1 https://github.com/libimobiledevice/libimobiledevice.git; \
   cd libimobiledevice; \
   ./autogen.sh --prefix="$prefix" --without-cython; \
