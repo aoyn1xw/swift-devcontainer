@@ -55,7 +55,7 @@ RUN set -eux; \
     /usr/lib/x86_64-linux-gnu/libusbmuxd*
 
 # ------------------------------------------------------------
-# Build libimobiledevice stack from source
+# Build libimobiledevice stack from source (with compatible versions)
 # ------------------------------------------------------------
 RUN set -eux; \
   jobs="$(nproc)"; \
@@ -87,7 +87,7 @@ RUN set -eux; \
   make install; \
   cd "$build"; rm -rf libusbmuxd; \
   \
-  git clone --depth 1 --branch 1.3.0 https://github.com/libimobiledevice/libimobiledevice.git; \
+  git clone --depth 1 https://github.com/libimobiledevice/libimobiledevice.git; \
   cd libimobiledevice; \
   ./autogen.sh --prefix="$prefix" --without-cython; \
   make -j "$jobs"; \
