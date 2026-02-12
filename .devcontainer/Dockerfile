@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   libncurses-dev libpython3-dev libxml2-dev libz3-dev \
   libimobiledevice-dev libplist-dev libusbmuxd-dev \
   autoconf automake libtool \
+  libusb-1.0-0-dev libreadline-dev \
   && rm -rf /var/lib/apt/lists/*
 
 # Install Swift via swiftly + build xtool & zsign (all in one layer)
@@ -37,37 +38,65 @@ RUN set -eux; \
   if [ -f "$swiftly_home/env.sh" ]; then . "$swiftly_home/env.sh"; fi; \
   swift --version; \
   \
-  # --- Build libimobiledevice from source with latest API --- \
-  echo "=== Building libimobiledevice from source ==="; \
-  git clone --depth 1 https://github.com/libimobiledevice/libplist.git; \
+  # --- Remove conflicting apt packages --- \
+  echo "=== Removing conflicting system packages ==="; \
+  apt-get remove -y libimobiledevice-dev libplist-dev libusbmuxd-dev || true; \
+  \
+  # --- Build libimobiledevice from source with pinned versions --- \
+  echo "=== Building libimobiledevice stack from source ==="; \
+  export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH:-}"; \
+  export LD_LIBRARY_PATH="/usr/local/lib:${LD_LIBRARY_PATH:-}"; \
+  \
+  # libplist \
+  git clone --depth 1 --branch 2.6.0 https://github.com/libimobiledevice/libplist.git; \
   cd libplist; \
-  ./autogen.sh --prefix="$prefix"; \
+  ./autogen.sh --prefix="$prefix" --without-cython; \
   make -j "$jobs"; \
   make install; \
-  cd "$build"; \
-  git clone --depth 1 https://github.com/libimobiledevice/libusbmuxd.git; \
+  cd "$build"; rm -rf libplist; \
+  \
+  # libusbmuxd \
+  git clone --depth 1 --branch 2.1.0 https://github.com/libimobiledevice/libusbmuxd.git; \
   cd libusbmuxd; \
-  ./autogen.sh --prefix="$prefix"; \
+  ./autogen.sh --prefix="$prefix" --without-cython; \
   make -j "$jobs"; \
   make install; \
-  cd "$build"; \
-  git clone --depth 1 https://github.com/libimobiledevice/libimobiledevice.git; \
+  cd "$build"; rm -rf libusbmuxd; \
+  \
+  # libimobiledevice-glue (new dependency) \
+  git clone --depth 1 --branch 1.3.0 https://github.com/libimobiledevice/libimobiledevice-glue.git; \
+  cd libimobiledevice-glue; \
+  ./autogen.sh --prefix="$prefix" --without-cython; \
+  make -j "$jobs"; \
+  make install; \
+  cd "$build"; rm -rf libimobiledevice-glue; \
+  \
+  # libimobiledevice \
+  git clone --depth 1 --branch 1.3.0 https://github.com/libimobiledevice/libimobiledevice.git; \
   cd libimobiledevice; \
-  ./autogen.sh --prefix="$prefix"; \
+  ./autogen.sh --prefix="$prefix" --without-cython; \
   make -j "$jobs"; \
   make install; \
+  cd "$build"; rm -rf libimobiledevice; \
+  \
+  # Update ldconfig \
+  echo "/usr/local/lib" > /etc/ld.so.conf.d/local.conf; \
   ldconfig; \
-  cd "$build"; \
+  \
+  # Verify installation \
+  pkg-config --modversion libimobiledevice-1.0 || { echo "libimobiledevice pkg-config check failed"; exit 1; }; \
   \
   # --- xtool (iOS cross-compile) --- \
   echo "=== Building xtool ==="; \
   git clone --depth 1 --branch "1.16.1" https://github.com/xtool-org/xtool.git xtool; \
   cd xtool; \
-  export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH:-}"; \
   swift build -c release -j "$jobs" || { \
-    echo "=== xtool build failed, checking dependencies ==="; \
+    echo "=== xtool build failed, diagnostics ==="; \
     pkg-config --modversion libimobiledevice-1.0 || echo "libimobiledevice not found via pkg-config"; \
+    pkg-config --cflags libimobiledevice-1.0 || echo "Cannot get cflags"; \
+    pkg-config --libs libimobiledevice-1.0 || echo "Cannot get libs"; \
     ls -la /usr/local/include/libimobiledevice/ || echo "libimobiledevice headers not found"; \
+    ls -la /usr/local/lib/libimobiledevice* || echo "libimobiledevice libs not found"; \
     exit 1; \
   }; \
   install -m 0755 .build/release/xtool "$prefix/bin/xtool"; \
@@ -91,10 +120,12 @@ RUN set -eux; \
     echo 'export SWIFTLY_HOME_DIR="/usr/local/share/swiftly"'; \
     echo 'export PATH="$SWIFTLY_HOME_DIR/bin:/usr/local/bin:$PATH"'; \
     echo 'export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"'; \
+    echo 'export LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH"'; \
     echo '[ -f "$SWIFTLY_HOME_DIR/env.sh" ] && . "$SWIFTLY_HOME_DIR/env.sh"'; \
   } >> /etc/bash.bashrc; \
   \
   # --- verify installations --- \
+  echo "=== Verifying installations ==="; \
   swiftly --version; \
   swift --version; \
   xtool --help | head -1 || true; \
