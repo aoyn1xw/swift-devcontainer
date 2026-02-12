@@ -2,6 +2,7 @@ FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV NODE_VERSION=20
+ENV PATH="/usr/local/bin:$PATH"
 
 # ------------------------------------------------------------
 # Base system + Node.js + build deps
@@ -17,10 +18,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   usbmuxd libimobiledevice-utils \
   && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js LTS
+# Install Node.js LTS and TypeScript with type definitions
 RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - && \
     apt-get install -y nodejs && \
-    npm install -g typescript && \
+    npm install -g typescript @types/node @types/mocha @types/jest && \
     node -v && npm -v && tsc -v
 
 # ------------------------------------------------------------
@@ -29,8 +30,10 @@ RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - && \
 RUN set -eux; \
   SWIFT_URL="https://download.swift.org/swift-6.2-release/ubuntu2404/swift-6.2-RELEASE/swift-6.2-RELEASE-ubuntu24.04.tar.gz"; \
   curl -fsSL "$SWIFT_URL" -o swift.tar.gz; \
-  tar xzf swift.tar.gz -C /usr/local --strip-components=1; \
-  rm swift.tar.gz; \
+  mkdir -p /tmp/swift; \
+  tar xzf swift.tar.gz -C /tmp/swift --strip-components=1; \
+  cp -r /tmp/swift/usr/* /usr/local/; \
+  rm -rf swift.tar.gz /tmp/swift; \
   swift --version
 
 # ------------------------------------------------------------
