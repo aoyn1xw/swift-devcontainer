@@ -2,7 +2,8 @@
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/aoyn1xw/swift-devcontainer?quickstart=1)
 
-A **ready-to-use cloud dev environment** for iOS development without a Mac. Spin up a Codespace and get Swift, xtool, and zsign pre-installed.
+A ready-to-use cloud dev environment for iOS-targeted Swift development without a Mac.
+This setup focuses on compiling, packaging, and signing iOS apps using free and open-source tools on Linux.
 
 ---
 
