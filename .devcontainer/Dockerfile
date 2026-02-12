@@ -1,29 +1,18 @@
 FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV NODE_VERSION=20
 ENV PATH="/usr/local/bin:$PATH"
 
 # ------------------------------------------------------------
-# Base system + Node.js + build deps + FUSE for AppImage
+# Base system + build deps + FUSE for AppImage
 # ------------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
   git curl ca-certificates tar xz-utils \
   build-essential g++ pkg-config \
-  cmake ninja-build \
-  autoconf automake libtool \
   libssl-dev libminizip-dev liblzma-dev \
-  libncurses-dev libpython3-dev libxml2-dev libz3-dev \
-  libusb-1.0-0-dev libreadline-dev \
   usbmuxd libimobiledevice-utils \
   fuse libfuse2 \
   && rm -rf /var/lib/apt/lists/*
-
-# Install Node.js LTS and TypeScript
-RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - && \
-    apt-get install -y nodejs && \
-    npm install -g typescript && \
-    node -v && npm -v && tsc -v
 
 # ------------------------------------------------------------
 # Swift 6.2 (official release)
@@ -38,7 +27,7 @@ RUN set -eux; \
   swift --version
 
 # ------------------------------------------------------------
-# xtool (using AppImage from GitHub releases)
+# xtool (extract AppImage to avoid FUSE runtime dependency)
 # ------------------------------------------------------------
 RUN set -eux; \
   curl -fsSL \
@@ -51,7 +40,7 @@ RUN set -eux; \
   xtool --help
 
 # ------------------------------------------------------------
-# zsign (build from source using official instructions)
+# zsign (build from source)
 # ------------------------------------------------------------
 RUN set -eux; \
   git clone https://github.com/zhlynn/zsign.git /tmp/zsign; \
@@ -74,4 +63,4 @@ RUN set -eux; \
 # ------------------------------------------------------------
 # Final sanity check
 # ------------------------------------------------------------
-RUN node -v && npm -v && tsc -v && swift --version && xtool --help && zsign
+RUN swift --version && xtool --help && zsign
