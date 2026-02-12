@@ -102,6 +102,10 @@ Changes to `Dockerfile` or `devcontainer.json` require a rebuild:
 - If you want to push apps to TestFlight/App Store you still need a Mac for final submission
 - There is no Simulator — this is a Linux environment, not macOS
 
+## Related Resources
+
+- [theos](https://github.com/theos) - iOS toolchain for building tweaks and jailbreak apps
+
 ## License
 
 This repo contains only configuration files. Licensing for included tools:
