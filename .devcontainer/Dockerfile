@@ -29,20 +29,21 @@ RUN set -eux; \
   swift --version
 
 # ------------------------------------------------------------
-# xtool (extract AppImage safely)
+# xtool (extract AppImage and copy ALL contents)
 # ------------------------------------------------------------
 RUN set -eux; \
   curl -fsSL "https://github.com/xtool-org/xtool/releases/latest/download/xtool-$(uname -m).AppImage" -o /tmp/xtool.AppImage; \
   chmod +x /tmp/xtool.AppImage; \
   cd /tmp; \
   ./xtool.AppImage --appimage-extract 2>&1 || true; \
-  if [ ! -f /tmp/squashfs-root/AppRun ]; then \
+  if [ ! -d /tmp/squashfs-root ]; then \
     echo "ERROR: AppImage extraction failed!"; \
-    ls -la /tmp/ || true; \
     exit 1; \
   fi; \
-  cp /tmp/squashfs-root/AppRun /usr/local/bin/xtool; \
-  chmod +x /usr/local/bin/xtool; \
+  mkdir -p /opt/xtool; \
+  cp -r /tmp/squashfs-root/* /opt/xtool/; \
+  ln -s /opt/xtool/AppRun /usr/local/bin/xtool; \
+  chmod +x /opt/xtool/AppRun; \
   rm -rf /tmp/xtool.AppImage /tmp/squashfs-root; \
   xtool --help
 
