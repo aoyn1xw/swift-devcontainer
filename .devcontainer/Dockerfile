@@ -36,6 +36,7 @@ RUN set -eux; \
   chmod +x /tmp/xtool.AppImage; \
   cd /tmp && ./xtool.AppImage --appimage-extract; \
   if [ ! -f /tmp/squashfs-root/AppRun ]; then echo "AppRun not found!"; exit 1; fi; \
+  rm -f /usr/local/bin/xtool; \
   mv /tmp/squashfs-root/AppRun /usr/local/bin/xtool; \
   chmod +x /usr/local/bin/xtool; \
   rm -rf /tmp/xtool.AppImage /tmp/squashfs-root; \

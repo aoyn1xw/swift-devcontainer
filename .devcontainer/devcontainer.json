@@ -13,7 +13,12 @@
       ],
       "settings": {
         "swift.path": "/usr/local/bin/swift",
-        "lldb.library": "/usr/local/lib/liblldb.so"
+        "lldb.library": "/usr/local/lib/liblldb.so",
+        "typescript.validate.enable": false,
+        "javascript.validate.enable": false,
+        "typescript.tsc.autoDetect": "off",
+        "npm.autoDetect": "off",
+        "js/ts.implicitProjectConfig.checkJs": false
       }
     }
   },
