@@ -5,7 +5,7 @@ ENV NODE_VERSION=20
 ENV PATH="/usr/local/bin:$PATH"
 
 # ------------------------------------------------------------
-# Base system + Node.js + build deps
+# Base system + Node.js + build deps + FUSE for AppImage
 # ------------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
   git curl ca-certificates tar xz-utils \
@@ -16,12 +16,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   libncurses-dev libpython3-dev libxml2-dev libz3-dev \
   libusb-1.0-0-dev libreadline-dev \
   usbmuxd libimobiledevice-utils \
+  fuse libfuse2 \
   && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js LTS and TypeScript with type definitions
+# Install Node.js LTS and TypeScript
 RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - && \
     apt-get install -y nodejs && \
-    npm install -g typescript @types/node @types/mocha @types/jest && \
+    npm install -g typescript && \
     node -v && npm -v && tsc -v
 
 # ------------------------------------------------------------
@@ -42,8 +43,11 @@ RUN set -eux; \
 RUN set -eux; \
   curl -fsSL \
     "https://github.com/xtool-org/xtool/releases/latest/download/xtool-$(uname -m).AppImage" \
-    -o /usr/local/bin/xtool; \
-  chmod +x /usr/local/bin/xtool; \
+    -o /tmp/xtool.AppImage; \
+  chmod +x /tmp/xtool.AppImage; \
+  cd /tmp && ./xtool.AppImage --appimage-extract; \
+  mv squashfs-root/AppRun /usr/local/bin/xtool; \
+  rm -rf /tmp/xtool.AppImage /tmp/squashfs-root; \
   xtool --help
 
 # ------------------------------------------------------------
