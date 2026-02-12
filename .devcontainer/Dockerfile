@@ -4,7 +4,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV PATH="/usr/local/bin:$PATH"
 
 # ------------------------------------------------------------
-# Base system + build deps + FUSE for AppImage
+# Base system + build dependencies + FUSE for AppImage
 # ------------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
   git curl ca-certificates tar xz-utils \
@@ -17,27 +17,27 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && rm -rf /var/lib/apt/lists/*
 
 # ------------------------------------------------------------
-# Swift 6.2 (official release)
+# Swift 6.2
 # ------------------------------------------------------------
 RUN set -eux; \
   SWIFT_URL="https://download.swift.org/swift-6.2-release/ubuntu2404/swift-6.2-RELEASE/swift-6.2-RELEASE-ubuntu24.04.tar.gz"; \
-  curl -fsSL "$SWIFT_URL" -o swift.tar.gz; \
+  curl -fsSL "$SWIFT_URL" -o /tmp/swift.tar.gz; \
   mkdir -p /tmp/swift; \
-  tar xzf swift.tar.gz -C /tmp/swift --strip-components=1; \
+  tar xzf /tmp/swift.tar.gz -C /tmp/swift --strip-components=1; \
   cp -r /tmp/swift/usr/* /usr/local/; \
-  rm -rf swift.tar.gz /tmp/swift; \
+  rm -rf /tmp/swift /tmp/swift.tar.gz; \
   swift --version
 
 # ------------------------------------------------------------
-# xtool (extract AppImage to avoid FUSE runtime dependency)
+# xtool (extract AppImage safely)
 # ------------------------------------------------------------
 RUN set -eux; \
-  curl -fsSL \
-    "https://github.com/xtool-org/xtool/releases/latest/download/xtool-$(uname -m).AppImage" \
-    -o /tmp/xtool.AppImage; \
+  curl -fsSL "https://github.com/xtool-org/xtool/releases/latest/download/xtool-$(uname -m).AppImage" -o /tmp/xtool.AppImage; \
   chmod +x /tmp/xtool.AppImage; \
   cd /tmp && ./xtool.AppImage --appimage-extract; \
-  mv squashfs-root/AppRun /usr/local/bin/xtool; \
+  if [ ! -f /tmp/squashfs-root/AppRun ]; then echo "AppRun not found!"; exit 1; fi; \
+  mv /tmp/squashfs-root/AppRun /usr/local/bin/xtool; \
+  chmod +x /usr/local/bin/xtool; \
   rm -rf /tmp/xtool.AppImage /tmp/squashfs-root; \
   xtool --help
 
@@ -53,7 +53,7 @@ RUN set -eux; \
   zsign
 
 # ------------------------------------------------------------
-# Theos (cross-platform build system for iOS/macOS/Linux/Windows)
+# Theos
 # ------------------------------------------------------------
 RUN set -eux; \
   bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
