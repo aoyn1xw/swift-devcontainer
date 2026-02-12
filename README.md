@@ -7,6 +7,24 @@ This setup focuses on compiling, packaging, and signing iOS apps using free and 
 
 ---
 
+## Intended Use
+
+This environment is designed for:
+
+- Learning Swift and iOS APIs
+- Writing and compiling iOS-targeted Swift code
+- Building and packaging IPAs on Linux
+- Prototyping app logic without macOS
+
+This environment is **not** suitable for:
+
+- Xcode usage
+- iOS Simulator or device debugging
+- SwiftUI previews
+- App Store or TestFlight submission
+
+---
+
 ## What's Included
 
 | Tool | Version | Purpose |
