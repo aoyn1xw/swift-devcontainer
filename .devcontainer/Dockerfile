@@ -42,12 +42,12 @@ RUN set -eux; \
   echo "=== Removing conflicting system packages ==="; \
   apt-get remove -y libimobiledevice-dev libplist-dev libusbmuxd-dev || true; \
   \
-  # --- Build libimobiledevice from source with pinned versions --- \
+  # --- Build libimobiledevice from source with pinned versions (CORRECT ORDER) --- \
   echo "=== Building libimobiledevice stack from source ==="; \
   export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH:-}"; \
   export LD_LIBRARY_PATH="/usr/local/lib:${LD_LIBRARY_PATH:-}"; \
   \
-  # libplist \
+  # libplist (no dependencies) \
   git clone --depth 1 --branch 2.6.0 https://github.com/libimobiledevice/libplist.git; \
   cd libplist; \
   ./autogen.sh --prefix="$prefix" --without-cython; \
@@ -55,15 +55,7 @@ RUN set -eux; \
   make install; \
   cd "$build"; rm -rf libplist; \
   \
-  # libusbmuxd \
-  git clone --depth 1 --branch 2.1.0 https://github.com/libimobiledevice/libusbmuxd.git; \
-  cd libusbmuxd; \
-  ./autogen.sh --prefix="$prefix" --without-cython; \
-  make -j "$jobs"; \
-  make install; \
-  cd "$build"; rm -rf libusbmuxd; \
-  \
-  # libimobiledevice-glue (new dependency) \
+  # libimobiledevice-glue (depends on libplist) - BUILD BEFORE libusbmuxd \
   git clone --depth 1 --branch 1.3.0 https://github.com/libimobiledevice/libimobiledevice-glue.git; \
   cd libimobiledevice-glue; \
   ./autogen.sh --prefix="$prefix" --without-cython; \
@@ -71,7 +63,15 @@ RUN set -eux; \
   make install; \
   cd "$build"; rm -rf libimobiledevice-glue; \
   \
-  # libimobiledevice \
+  # libusbmuxd (depends on libplist and libimobiledevice-glue) \
+  git clone --depth 1 --branch 2.1.0 https://github.com/libimobiledevice/libusbmuxd.git; \
+  cd libusbmuxd; \
+  ./autogen.sh --prefix="$prefix" --without-cython; \
+  make -j "$jobs"; \
+  make install; \
+  cd "$build"; rm -rf libusbmuxd; \
+  \
+  # libimobiledevice (depends on all of the above) \
   git clone --depth 1 --branch 1.3.0 https://github.com/libimobiledevice/libimobiledevice.git; \
   cd libimobiledevice; \
   ./autogen.sh --prefix="$prefix" --without-cython; \
