@@ -8,11 +8,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   libssl-dev libminizip-dev liblzma-dev \
   libncurses-dev libpython3-dev libxml2-dev libz3-dev \
   libimobiledevice-dev libplist-dev libusbmuxd-dev \
+  libglib2.0-dev \
   && rm -rf /var/lib/apt/lists/*
+
 
 # Install Swift via swiftly + build xtool & zsign (all in one layer)
 RUN set -eux; \
   export DEBIAN_FRONTEND=noninteractive; \
+  apt-get update && apt-get install -y --no-install-recommends \
+    libncurses-dev libpython3-dev libxml2-dev libz3-dev \
+    libimobiledevice-dev libplist-dev libusbmuxd-dev \
+  && rm -rf /var/lib/apt/lists/*; \
   jobs="$(nproc)"; \
   prefix="/usr/local"; \
   swiftly_home="/usr/local/share/swiftly"; \
@@ -40,7 +46,13 @@ RUN set -eux; \
   echo "=== Building xtool ==="; \
   git clone --depth 1 --branch "1.16.1" https://github.com/xtool-org/xtool.git xtool; \
   cd xtool; \
-  swift build -c release -j "$jobs"; \
+  export PKG_CONFIG_PATH="/usr/lib/$(uname -m)-linux-gnu/pkgconfig:$PKG_CONFIG_PATH"; \
+  swift build -c release -j "$jobs" || { \
+    echo "=== xtool build failed, checking dependencies ==="; \
+    pkg-config --modversion libimobiledevice-1.0 || echo "libimobiledevice not found via pkg-config"; \
+    ls -la /usr/include/libimobiledevice/ || echo "libimobiledevice headers not found"; \
+    exit 1; \
+  }; \
   install -m 0755 .build/release/xtool "$prefix/bin/xtool"; \
   cd "$build"; rm -rf xtool; \
   \
@@ -61,18 +73,11 @@ RUN set -eux; \
     echo '# Swift environment'; \
     echo 'export SWIFTLY_HOME_DIR="/usr/local/share/swiftly"'; \
     echo 'export PATH="$SWIFTLY_HOME_DIR/bin:/usr/local/bin:$PATH"'; \
-    echo '[ -f "$SWIFTLY_HOME_DIR/env.sh" ] && . "$SWIFTLY_HOME_DIR/env.sh"'; \
+    echo 'if [ -f "$SWIFTLY_HOME_DIR/env.sh" ]; then . "$SWIFTLY_HOME_DIR/env.sh"; fi'; \
   } >> /etc/bash.bashrc; \
-  cp /etc/bash.bashrc /etc/profile.d/swiftly.sh || true; \
-  { echo ''; \
-    echo 'export SWIFTLY_HOME_DIR="/usr/local/share/swiftly"'; \
-    echo 'export PATH="$SWIFTLY_HOME_DIR/bin:/usr/local/bin:$PATH"'; \
-    echo '[ -f "$SWIFTLY_HOME_DIR/env.sh" ] && . "$SWIFTLY_HOME/env.sh"'; \
-  } > /etc/profile.d/swiftly.sh; \
   \
   # --- verify --- \
-  echo "=== Installed tools ==="; \
-  swift --version; \
-  xtool --help | head -1 || true; \
+  swiftly --version; \
+  xtool --help | head -1 || ********; \
   zsign --help | head -1 || true; \
   echo "DONE"
