@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   git curl ca-certificates tar xz-utils \
   build-essential g++ pkg-config \
   libssl-dev libminizip-dev liblzma-dev \
+  libncurses6 libncurses-dev \
   usbmuxd libimobiledevice-utils \
   fuse libfuse2 \
   bash sudo \
