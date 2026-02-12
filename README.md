@@ -1,4 +1,4 @@
-# Swift Devcontainer (xtool + zsign)
+# Swift Devcontainer
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/aoyn1xw/swift-devcontainer?quickstart=1)
 
