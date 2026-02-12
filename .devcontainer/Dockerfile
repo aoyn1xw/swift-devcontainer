@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   libssl-dev libminizip-dev liblzma-dev \
   libncurses-dev libpython3-dev libxml2-dev libz3-dev \
   libusb-1.0-0-dev libreadline-dev \
+  usbmuxd libimobiledevice-utils \
   && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js LTS
@@ -23,109 +24,35 @@ RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - && \
     node -v && npm -v && tsc -v
 
 # ------------------------------------------------------------
-# Swift via swiftly
+# Swift 6.2 (official release)
 # ------------------------------------------------------------
 RUN set -eux; \
-  prefix="/usr/local"; \
-  swiftly_home="/usr/local/share/swiftly"; \
-  curl -fsSLO "https://download.swift.org/swiftly/linux/swiftly-$(uname -m).tar.gz"; \
-  tar zxf "swiftly-$(uname -m).tar.gz"; \
-  install -m 0755 swiftly "$prefix/bin/swiftly"; \
-  rm swiftly swiftly-*.tar.gz; \
-  SWIFTLY_HOME_DIR="$swiftly_home" SWIFTLY_BIN_DIR="$prefix/bin" \
-    "$prefix/bin/swiftly" init --quiet-shell-followup; \
-  . "$swiftly_home/env.sh"; \
-  "$prefix/bin/swiftly" install latest --use; \
+  SWIFT_URL="https://download.swift.org/swift-6.2-release/ubuntu2404/swift-6.2-RELEASE/swift-6.2-RELEASE-ubuntu24.04.tar.gz"; \
+  curl -fsSL "$SWIFT_URL" -o swift.tar.gz; \
+  tar xzf swift.tar.gz -C /usr/local --strip-components=1; \
+  rm swift.tar.gz; \
   swift --version
 
 # ------------------------------------------------------------
-# Remove distro libimobiledevice stack completely
+# xtool (using AppImage from GitHub releases)
 # ------------------------------------------------------------
 RUN set -eux; \
-  apt-get purge -y \
-    libimobiledevice-dev \
-    libplist-dev \
-    libusbmuxd-dev || true; \
-  rm -rf \
-    /usr/include/libimobiledevice \
-    /usr/include/plist \
-    /usr/include/usbmuxd \
-    /usr/lib/x86_64-linux-gnu/libimobiledevice* \
-    /usr/lib/x86_64-linux-gnu/libplist* \
-    /usr/lib/x86_64-linux-gnu/libusbmuxd*
+  curl -fsSL \
+    "https://github.com/xtool-org/xtool/releases/latest/download/xtool-$(uname -m).AppImage" \
+    -o /usr/local/bin/xtool; \
+  chmod +x /usr/local/bin/xtool; \
+  xtool --help
 
 # ------------------------------------------------------------
-# Build libimobiledevice stack from source (with compatible versions)
+# zsign (build from source using official instructions)
 # ------------------------------------------------------------
 RUN set -eux; \
-  jobs="$(nproc)"; \
-  prefix="/usr/local"; \
-  build="/tmp/build"; \
-  export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig"; \
-  export LD_LIBRARY_PATH="/usr/local/lib"; \
-  mkdir -p "$build"; \
-  cd "$build"; \
-  \
-  git clone --depth 1 --branch 2.6.0 https://github.com/libimobiledevice/libplist.git; \
-  cd libplist; \
-  ./autogen.sh --prefix="$prefix" --without-cython; \
-  make -j "$jobs"; \
-  make install; \
-  cd "$build"; rm -rf libplist; \
-  \
-  git clone --depth 1 --branch 1.3.0 https://github.com/libimobiledevice/libimobiledevice-glue.git; \
-  cd libimobiledevice-glue; \
-  ./autogen.sh --prefix="$prefix" --without-cython; \
-  make -j "$jobs"; \
-  make install; \
-  cd "$build"; rm -rf libimobiledevice-glue; \
-  \
-  git clone --depth 1 --branch 2.1.0 https://github.com/libimobiledevice/libusbmuxd.git; \
-  cd libusbmuxd; \
-  ./autogen.sh --prefix="$prefix" --without-cython; \
-  make -j "$jobs"; \
-  make install; \
-  cd "$build"; rm -rf libusbmuxd; \
-  \
-  git clone --depth 1 --branch 1.0.3 https://github.com/libimobiledevice/libtatsu.git; \
-  cd libtatsu; \
-  ./autogen.sh --prefix="$prefix" --without-cython; \
-  make -j "$jobs"; \
-  make install; \
-  cd "$build"; rm -rf libtatsu; \
-  \
-  git clone --depth 1 https://github.com/libimobiledevice/libimobiledevice.git; \
-  cd libimobiledevice; \
-  ./autogen.sh --prefix="$prefix" --without-cython; \
-  make -j "$jobs"; \
-  make install; \
-  cd "$build"; rm -rf libimobiledevice; \
-  \
-  echo "/usr/local/lib" > /etc/ld.so.conf.d/local.conf; \
-  ldconfig; \
-  pkg-config --modversion libimobiledevice-1.0; \
-  rm -rf "$build"
-
-# ------------------------------------------------------------
-# xtool
-# ------------------------------------------------------------
-RUN set -eux; \
-  . /usr/local/share/swiftly/env.sh; \
-  git clone --depth 1 --branch 1.16.1 https://github.com/xtool-org/xtool.git /tmp/xtool; \
-  cd /tmp/xtool; \
-  swift build -c release -j "$(nproc)"; \
-  install -m 0755 .build/release/xtool /usr/local/bin/xtool; \
-  rm -rf /tmp/xtool
-
-# ------------------------------------------------------------
-# zsign
-# ------------------------------------------------------------
-RUN set -eux; \
-  git clone --depth 1 --branch v0.7 https://github.com/zhlynn/zsign.git /tmp/zsign; \
+  git clone https://github.com/zhlynn/zsign.git /tmp/zsign; \
   cd /tmp/zsign/build/linux; \
-  make -j "$(nproc)"; \
+  make clean && make; \
   install -m 0755 zsign /usr/local/bin/zsign; \
-  rm -rf /tmp/zsign
+  rm -rf /tmp/zsign; \
+  zsign
 
 # ------------------------------------------------------------
 # Environment setup
@@ -133,15 +60,11 @@ RUN set -eux; \
 RUN set -eux; \
   { \
     echo ''; \
-    echo '# Swift'; \
-    echo 'export SWIFTLY_HOME_DIR="/usr/local/share/swiftly"'; \
-    echo 'export PATH="$SWIFTLY_HOME_DIR/bin:/usr/local/bin:$PATH"'; \
-    echo 'export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"'; \
-    echo 'export LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH"'; \
-    echo '[ -f "$SWIFTLY_HOME_DIR/env.sh" ] && . "$SWIFTLY_HOME_DIR/env.sh"'; \
+    echo '# Swift and tools environment'; \
+    echo 'export PATH="/usr/local/bin:$PATH"'; \
   } >> /etc/bash.bashrc
 
 # ------------------------------------------------------------
 # Final sanity check
 # ------------------------------------------------------------
-RUN node -v && npm -v && tsc -v && swift --version && xtool --help | head -1 && zsign --help | head -1
+RUN node -v && npm -v && tsc -v && swift --version && xtool --help && zsign
