@@ -74,6 +74,11 @@ RUN set -eux; \
   # libimobiledevice (depends on all of the above) \
   git clone --depth 1 --branch 1.3.0 https://github.com/libimobiledevice/libimobiledevice.git; \
   cd libimobiledevice; \
+  \
+  # Patch utils.h to remove conflicting enum definitions \
+  echo "=== Patching libimobiledevice to fix enum conflicts ==="; \
+  sed -i '/^typedef enum {$/,/^} plist_format_t;$/d' common/utils.h; \
+  \
   ./autogen.sh --prefix="$prefix" --without-cython; \
   make -j "$jobs"; \
   make install; \
