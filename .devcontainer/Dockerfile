@@ -5,9 +5,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   git curl ca-certificates tar xz-utils \
   build-essential g++ pkg-config \
   cmake ninja-build \
-  libssl-dev libminizip-dev liblzma-dev \
-  libncurses-dev libpython3-dev libxml2-dev libz3-dev \
+  libssl-dev libminizip-dev \
   libimobiledevice-dev libplist-dev libusbmuxd-dev \
+  libncurses-dev libpython3-dev libxml2-dev libz3-dev liblzma-dev \
   && rm -rf /var/lib/apt/lists/*
 
 
