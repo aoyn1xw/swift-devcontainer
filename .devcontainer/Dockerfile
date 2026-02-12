@@ -46,7 +46,7 @@ RUN set -eux; \
   echo "=== Building xtool ==="; \
   git clone --depth 1 --branch "1.16.1" https://github.com/xtool-org/xtool.git xtool; \
   cd xtool; \
-  export PKG_CONFIG_PATH="/usr/lib/$(uname -m)-linux-gnu/pkgconfig:$PKG_CONFIG_PATH"; \
+  export PKG_CONFIG_PATH="/usr/lib/$(uname -m)-linux-gnu/pkgconfig:${PKG_CONFIG_PATH:-}"; \
   swift build -c release -j "$jobs" || { \
     echo "=== xtool build failed, checking dependencies ==="; \
     pkg-config --modversion libimobiledevice-1.0 || echo "libimobiledevice not found via pkg-config"; \
@@ -78,6 +78,6 @@ RUN set -eux; \
   \
   # --- verify --- \
   swiftly --version; \
-  xtool --help | head -1 || ********; \
+  xtool --help | head -1 || true; \
   zsign --help | head -1 || true; \
   echo "DONE"
