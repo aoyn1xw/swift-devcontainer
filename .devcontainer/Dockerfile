@@ -70,9 +70,9 @@ RUN set -eux; \
   git clone --depth 1 https://github.com/zhlynn/zsign.git /tmp/zsign; \
   cd /tmp/zsign/build/linux; \
   make; \
-  install -m 0755 zsign /usr/local/bin/zsign; \
+  install -m 0755 ../../bin/zsign /usr/local/bin/zsign; \
   rm -rf /tmp/zsign; \
-  zsign --version || zsign --help || true
+  zsign --help || true
 
 # ------------------------------------------------------------
 # Theos
