@@ -3,6 +3,12 @@
   "build": {
     "dockerfile": "Dockerfile"
   },
+  "hostRequirements": {
+    "cpus": 4
+  },
+  "mounts": [
+    "source=swift-spm-cache,target=/home/vscode/.cache/org.swift.swiftpm,type=volume"
+  ],
   "customizations": {
     "vscode": {
       "extensions": [
@@ -11,11 +17,11 @@
       ],
       "settings": {
         "swift.path": "/usr/local/bin/swift",
-        "lldb.library": "/usr/local/lib/swift/linux/liblldb.so"
+        "lldb.library": "/usr/local/lib/swift/linux/liblldb.so",
+        "editor.formatOnSave": true
       }
     }
   },
   "remoteUser": "vscode",
-  "features": {},
   "postCreateCommand": "swift --version && xtool --help && zsign -h && echo 'THEOS='$THEOS"
 }
