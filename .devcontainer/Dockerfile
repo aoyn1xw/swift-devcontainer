@@ -6,9 +6,10 @@ ENV PATH="/usr/local/bin:$PATH"
 # Base system + build dependencies
 # ------------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
+  # General
   git curl ca-certificates tar xz-utils \
-  build-essential g++ pkg-config \
-  # Swift runtime requirements (per swift.org)
+  build-essential pkg-config \
+  # Swift runtime (per swift.org)
   binutils libedit2 libxml2-dev libsqlite3-0 libz3-dev \
   libcurl4-openssl-dev tzdata \
   # SSL / compression
@@ -17,19 +18,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   libncurses6 libncurses-dev \
   # iOS device communication
   usbmuxd libimobiledevice-utils \
-  # FUSE for AppImage (libfuse2 needed even for extract-only on 24.04)
-  fuse libfuse2 \
-  # zsign build dependencies
+  # AppImage extraction
+  libfuse2 \
+  # zsign build deps
   libplist-dev libzip-dev \
-  bash sudo \
   && rm -rf /var/lib/apt/lists/*
 
 # ------------------------------------------------------------
-# Swift 6.2.3 (multi-arch aware)
+# Swift (latest stable, multi-arch aware)
 # ------------------------------------------------------------
 RUN set -eux; \
-  SWIFT_VERSION="6.2.3"; \
   ARCH="$(uname -m)"; \
+  # Fetch the latest release version number from swift.org
+  SWIFT_VERSION="$(curl -fsSL https://www.swift.org/install/linux/tarball | grep -oP 'swift-\K[0-9]+\.[0-9]+\.[0-9]+(?=-RELEASE)' | sort -V | tail -1)"; \
+  echo "Installing Swift ${SWIFT_VERSION}"; \
   if [ "$ARCH" = "aarch64" ]; then \
     SWIFT_URL="https://download.swift.org/swift-${SWIFT_VERSION}-release/ubuntu2404-aarch64/swift-${SWIFT_VERSION}-RELEASE/swift-${SWIFT_VERSION}-RELEASE-ubuntu24.04-aarch64.tar.gz"; \
   else \
@@ -43,13 +45,12 @@ RUN set -eux; \
   swift --version
 
 # ------------------------------------------------------------
-# xtool (extract AppImage without FUSE)
+# xtool (extract AppImage, no FUSE required)
 # ------------------------------------------------------------
 RUN set -eux; \
   curl -fsSL "https://github.com/xtool-org/xtool/releases/latest/download/xtool-$(uname -m).AppImage" \
     -o /tmp/xtool.AppImage; \
   chmod +x /tmp/xtool.AppImage; \
-  # Extract without needing a FUSE mount (works in Docker with no --privileged)
   cd /tmp && APPIMAGE_EXTRACT_AND_RUN=1 ./xtool.AppImage --appimage-extract 2>&1 || true; \
   if [ ! -d /tmp/squashfs-root ]; then \
     echo "ERROR: AppImage extraction failed — squashfs-root not found"; \
@@ -71,8 +72,7 @@ RUN set -eux; \
   cd /tmp/zsign/build/linux; \
   make; \
   install -m 0755 ../../bin/zsign /usr/local/bin/zsign; \
-  rm -rf /tmp/zsign; \
-  zsign --help || true
+  rm -rf /tmp/zsign
 
 # ------------------------------------------------------------
 # Theos
@@ -83,6 +83,7 @@ ENV THEOS_MAKE_PATH=/opt/theos/makefiles
 RUN set -eux; \
   git clone --recursive --shallow-submodules \
     https://github.com/theos/theos.git /opt/theos; \
+  chown -R vscode:vscode /opt/theos; \
   chmod -R 755 /opt/theos
 
 # ------------------------------------------------------------
@@ -100,3 +101,5 @@ RUN { \
 # Final sanity check
 # ------------------------------------------------------------
 RUN swift --version && xtool --help && which zsign && test -d /opt/theos
+
+USER vscode
