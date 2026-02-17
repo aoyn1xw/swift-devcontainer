@@ -1,4 +1,4 @@
-# Swift Devcontainer
+# Swift Devcontainer (xtool + zsign + Theos)
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/aoyn1xw/swift-devcontainer?quickstart=1)
 
@@ -15,6 +15,7 @@ This environment is designed for:
 - Writing and compiling iOS-targeted Swift code
 - Building and packaging IPAs on Linux
 - Prototyping app logic without macOS
+- Tweak development with Theos
 
 This environment is **not** suitable for:
 
@@ -29,11 +30,12 @@ This environment is **not** suitable for:
 
 | Tool | Version | Purpose |
 |------|---------|---------|
-| **Swift** | latest (via swiftly) | Build Swift packages and apps |
-| **xtool** | v1.16.1 | Cross-compile Swift for iOS on Linux |
-| **zsign** | v0.7 | Code-sign IPAs without Xcode |
+| **Swift** | 6.2.3 | Build Swift packages and apps |
+| **xtool** | latest | Cross-compile Swift for iOS on Linux |
+| **zsign** | latest (built from source) | Code-sign IPAs without Xcode |
+| **Theos** | latest | iOS tweak and app development framework |
 
-All tools are compiled **during the image build**, so they're ready the moment your Codespace starts.
+All tools are installed **during the image build**, so they're ready the moment your Codespace starts.
 
 ---
 
@@ -43,23 +45,19 @@ Click the button above, or:
 
 1. Go to the repo on GitHub
 2. Click **Code → Codespaces → Create codespace on main**
-3. Wait ~5-10 min for the first build (cached after that)
-4. Verify:
-   ```sh
-   swift --version
-   xtool --help
-   zsign -h
-   ```
+3. Wait ~10-15 min for the first build (cached after that)
+4. Verify everything installed correctly:
+
+```sh
+swift --version
+xtool --help
+zsign -h
+ls $THEOS
+```
 
 ### Use This Template on Your Own Repo
 
-You can copy this dev container config into any repo:
-
-1. Copy the `.devcontainer/` folder into your project
-2. Push to GitHub
-3. Open a Codespace — your project will build with the same iOS toolchain
-
-Or fork this repo and customize it.
+Copy the `.devcontainer/` folder into any repo, push to GitHub, and open a Codespace — your project will build with the same iOS toolchain. Or just fork this repo and customize it.
 
 ---
 
@@ -78,9 +76,18 @@ Or fork this repo and customize it.
 ```
 .devcontainer/
   devcontainer.json   # Codespace/dev container config
-  Dockerfile          # Builds Swift + xtool + zsign from source
+  Dockerfile          # Builds Swift + xtool + zsign + Theos
 README.md
 ```
+
+---
+
+## Environment Variables
+
+| Variable | Value |
+|----------|-------|
+| `THEOS` | `/opt/theos` |
+| `THEOS_MAKE_PATH` | `/opt/theos/makefiles` |
 
 ---
 
@@ -88,7 +95,7 @@ README.md
 
 Changes to `Dockerfile` or `devcontainer.json` require a rebuild:
 
-- **Codespaces:** Delete the codespace and create a new one (or use Full Rebuild)
+- **Codespaces:** Delete the codespace and create a new one, or use **Full Rebuild**
 - **VS Code:** Run **Dev Containers: Rebuild Container**
 
 ---
@@ -96,19 +103,21 @@ Changes to `Dockerfile` or `devcontainer.json` require a rebuild:
 ## Notes
 
 - All binaries are installed to `/usr/local/bin`
-- Tool versions are pinned to avoid upstream breakage
-- Build failures cause the Docker image build to fail immediately
-- This is not a full Mac replacement — it's an alternative using free and open source tools
-- If you want to push apps to TestFlight/App Store you still need a Mac for final submission
+- Swift is installed from the official swift.org tarball for Ubuntu 24.04, pinned to 6.2.3
+- xtool is extracted from its AppImage release using `--appimage-extract` (no FUSE required)
+- zsign is compiled from source against the system's `libplist`, `libzip`, `libssl`, and `libminizip`
+- Theos is cloned to `/opt/theos` with shallow submodules to keep image size down
+- This is not a Mac replacement — it's a Linux-native alternative using free and open source tools
+- If you want to push to TestFlight or the App Store you still need a Mac for final submission
 - There is no Simulator — this is a Linux environment, not macOS
 
-## Related Resources
-
-- [theos](https://github.com/theos) - iOS toolchain for building tweaks and jailbreak apps
+---
 
 ## License
 
-This repo contains only configuration files. Licensing for included tools:
+This repo contains only configuration files. See the upstream tools for their own licenses:
 
+- [Swift](https://github.com/swiftlang/swift) — Apache 2.0
 - [xtool](https://github.com/xtool-org/xtool)
-- [zsign](https://github.com/zhlynn/zsign)
+- [zsign](https://github.com/zhlynn/zsign) — MIT
+- [Theos](https://github.com/theos/theos)
