@@ -118,6 +118,6 @@ Changes to `Dockerfile` or `devcontainer.json` require a rebuild:
 This repo contains only configuration files. See the upstream tools for their own licenses:
 
 - [Swift](https://github.com/swiftlang/swift) — Apache 2.0
-- [xtool](https://github.com/xtool-org/xtool)
+- [xtool](https://github.com/xtool-org/xtool) - MIT
 - [zsign](https://github.com/zhlynn/zsign) — MIT
 - [Theos](https://github.com/theos/theos)
