@@ -23,5 +23,5 @@
     }
   },
   "remoteUser": "vscode",
-  "postCreateCommand": "swift --version && xtool --help && zsign -h && echo 'THEOS='$THEOS"
+ "postCreateCommand": "swift --version && xtool --help && echo 'THEOS='$THEOS"
 }
