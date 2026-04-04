@@ -1,0 +1,24 @@
+services:
+  swift-dev:
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - CODE_SERVER_PASSWORD=yourpassword  # change this
+    volumes:
+      - swift-spm-cache:/home/vscode/.cache/org.swift.swiftpm
+      - project:/home/vscode/project
+    restart: unless-stopped
+    # Give the container enough resources
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+
+volumes:
+  swift-spm-cache:
+  project:
