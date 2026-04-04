@@ -17,27 +17,25 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && rm -rf /var/lib/apt/lists/*
 
 # ------------------------------------------------------------
-# Swift
+# Swift (pinned — avoids scraping failures)
 # ------------------------------------------------------------
+ARG SWIFT_VERSION=6.0.3
 RUN set -eux; \
   ARCH="$(uname -m)"; \
-  SWIFT_VERSION="$(curl -fsSL https://www.swift.org/install/linux/tarball \
-    | grep -oP 'swift-\K[0-9]+\.[0-9]+\.[0-9]+(?=-RELEASE)' \
-    | sort -V | tail -1)"; \
-  echo "Installing Swift ${SWIFT_VERSION}"; \
   if [ "$ARCH" = "aarch64" ]; then \
     SWIFT_URL="https://download.swift.org/swift-${SWIFT_VERSION}-release/ubuntu2404-aarch64/swift-${SWIFT_VERSION}-RELEASE/swift-${SWIFT_VERSION}-RELEASE-ubuntu24.04-aarch64.tar.gz"; \
   else \
     SWIFT_URL="https://download.swift.org/swift-${SWIFT_VERSION}-release/ubuntu2404/swift-${SWIFT_VERSION}-RELEASE/swift-${SWIFT_VERSION}-RELEASE-ubuntu24.04.tar.gz"; \
   fi; \
+  echo "Downloading Swift ${SWIFT_VERSION} from ${SWIFT_URL}"; \
   curl -fsSL "$SWIFT_URL" -o /tmp/swift.tar.gz; \
   mkdir -p /tmp/swift; \
   tar xzf /tmp/swift.tar.gz -C /tmp/swift --strip-components=1; \
-  # Strip debug symbols to save ~500MB
   find /tmp/swift/usr -name "*.so" | xargs strip --strip-debug 2>/dev/null || true; \
   find /tmp/swift/usr -name "swift-*" -type f | xargs strip --strip-debug 2>/dev/null || true; \
   cp -r /tmp/swift/usr/* /usr/local/; \
-  rm -rf /tmp/swift /tmp/swift.tar.gz
+  rm -rf /tmp/swift /tmp/swift.tar.gz; \
+  swift --version
 
 # ------------------------------------------------------------
 # xtool
