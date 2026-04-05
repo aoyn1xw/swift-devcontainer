@@ -6,12 +6,12 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - CODE_SERVER_PASSWORD=yourpassword  # change this
+      - CODE_SERVER_PASSWORD=yourpassword
     volumes:
       - swift-spm-cache:/home/vscode/.cache/org.swift.swiftpm
+      - xtool-config:/home/vscode/.config/xtool
       - project:/home/vscode/project
     restart: unless-stopped
-    # Give the container enough resources
     deploy:
       resources:
         limits:
@@ -21,4 +21,5 @@ services:
 
 volumes:
   swift-spm-cache:
+  xtool-config:
   project:

@@ -17,9 +17,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && rm -rf /var/lib/apt/lists/*
 
 # ------------------------------------------------------------
-# Swift (pinned — avoids scraping failures)
+# Swift 6.2 (pinned)
 # ------------------------------------------------------------
-ARG SWIFT_VERSION=6.0.3
+ARG SWIFT_VERSION=6.2
 RUN set -eux; \
   ARCH="$(uname -m)"; \
   if [ "$ARCH" = "aarch64" ]; then \
@@ -38,7 +38,7 @@ RUN set -eux; \
   swift --version
 
 # ------------------------------------------------------------
-# xtool
+# xtool binary only (no setup — done interactively at runtime)
 # ------------------------------------------------------------
 RUN set -eux; \
   curl -fsSL "https://github.com/xtool-org/xtool/releases/latest/download/xtool-$(uname -m).AppImage" \
@@ -54,27 +54,51 @@ RUN set -eux; \
   rm -rf /tmp/xtool.AppImage /tmp/squashfs-root
 
 # ------------------------------------------------------------
-# zsign (build from source, only keep the binary)
+# minizip-ng (build from source)
+# ------------------------------------------------------------
+RUN set -eux; \
+  apt-get update && apt-get install -y --no-install-recommends cmake zlib1g-dev \
+  && rm -rf /var/lib/apt/lists/*; \
+  git clone --depth 1 https://github.com/zlib-ng/minizip-ng.git /tmp/minizip-ng; \
+  cmake -S /tmp/minizip-ng -B /tmp/minizip-ng/build \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DMZ_FETCH_LIBS=OFF \
+    -DMZ_OPENSSL=ON \
+    -DMZ_PPMD=OFF \
+    -DMZ_LZMA=OFF; \
+  cmake --build /tmp/minizip-ng/build --parallel; \
+  cmake --install /tmp/minizip-ng/build; \
+  rm -rf /tmp/minizip-ng; \
+  cp /usr/local/lib/pkgconfig/minizip.pc /usr/local/lib/pkgconfig/minizip-ng.pc; \
+  sed -i 's/^Name: minizip/Name: minizip-ng/' /usr/local/lib/pkgconfig/minizip-ng.pc; \
+  pkg-config --libs minizip-ng
+
+# ------------------------------------------------------------
+# zsign (build from source)
 # ------------------------------------------------------------
 RUN set -eux; \
   git clone --depth 1 https://github.com/zhlynn/zsign.git /tmp/zsign; \
   cd /tmp/zsign/build/linux; \
-  make; \
+  sed -i 's/$(MINIZIP_LIB)/$(MINIZIP_LIB) -lz/' Makefile; \
+  make clean && make; \
   strip ../../bin/zsign; \
   install -m 0755 ../../bin/zsign /usr/local/bin/zsign; \
-  rm -rf /tmp/zsign
+  rm -rf /tmp/zsign; \
+  zsign --help | head -3
 
 # ------------------------------------------------------------
-# Theos (shallow clone, no .git history)
+# Theos (via official installer, run as non-root)
 # ------------------------------------------------------------
+ENV THEOS=/opt/theos
+RUN apt-get update && apt-get install -y --no-install-recommends sudo \
+  && rm -rf /var/lib/apt/lists/* \
+  && mkdir -p /opt/theos \
+  && chown vscode:vscode /opt/theos
+
 RUN set -eux; \
-  git clone --recursive --shallow-submodules --depth 1 \
-    https://github.com/theos/theos.git /opt/theos; \
-  # Remove docs, examples, and git metadata to save space
-  find /opt/theos -name ".git" -type d -exec rm -rf {} + 2>/dev/null || true; \
-  find /opt/theos -name "*.md" -delete 2>/dev/null || true; \
-  find /opt/theos -name "CHANGELOG*" -delete 2>/dev/null || true; \
-  find /opt/theos -name "LICENSE*" -delete 2>/dev/null || true
+  su vscode -c 'curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos | bash'
+
+RUN test -d /opt/theos
 
 
 # ============================================================
@@ -86,15 +110,14 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV PATH="/usr/local/bin:$PATH"
 ENV THEOS=/opt/theos
 ENV THEOS_MAKE_PATH=/opt/theos/makefiles
-ENV CODE_SERVER_PASSWORD=changeme
 
-# Runtime deps only — no build tools
+# Runtime deps only
 RUN apt-get update && apt-get install -y --no-install-recommends \
   # Swift runtime
   binutils libedit2 libxml2-dev libsqlite3-0 \
   libcurl4-openssl-dev tzdata \
   libssl3 libncurses6 \
-  # zsign runtime (Ubuntu 24.04 noble)
+  # zsign runtime
   libplist-dev libzip-dev libminizip-dev \
   # xtool / general
   libfuse2 libz3-dev \
@@ -111,9 +134,10 @@ COPY --from=builder /usr/local /usr/local
 COPY --from=builder /opt/xtool /opt/xtool
 COPY --from=builder /opt/theos /opt/theos
 
-# Symlinks
+# Symlinks + permissions
 RUN ln -sf /opt/xtool/AppRun /usr/local/bin/xtool \
   && chown -R vscode:vscode /opt/theos \
+  && chown -R vscode:vscode /opt/xtool \
   && chmod -R 755 /opt/theos
 
 # ------------------------------------------------------------
@@ -127,7 +151,7 @@ RUN code-server --install-extension sswg.swift-lang \
   && code-server --install-extension vadimcn.vscode-lldb \
   && rm -rf /tmp/*
 
-# code-server config
+# code-server config — password via env var at runtime
 RUN mkdir -p /home/vscode/.config/code-server && \
   cat > /home/vscode/.config/code-server/config.yaml <<'EOF'
 bind-addr: 0.0.0.0:8080
@@ -136,7 +160,7 @@ password: changeme
 cert: false
 EOF
 
-# VS Code settings (Swift path, formatter, etc.)
+# VS Code settings
 RUN mkdir -p /home/vscode/.local/share/code-server/User && \
   cat > /home/vscode/.local/share/code-server/User/settings.json <<'EOF'
 {
@@ -151,6 +175,29 @@ RUN mkdir -p /home/vscode/.local/share/code-server/User && \
   "files.autoSaveDelay": 1000
 }
 EOF
+
+# Entrypoint script — applies CODE_SERVER_PASSWORD env var at runtime
+RUN cat > /usr/local/bin/entrypoint.sh <<'EOF'
+#!/bin/bash
+set -e
+
+# Override password if env var is set
+if [ -n "$CODE_SERVER_PASSWORD" ]; then
+  sed -i "s/^password:.*/password: ${CODE_SERVER_PASSWORD}/" \
+    /home/vscode/.config/code-server/config.yaml
+fi
+
+echo "================================================"
+echo "  Swift iOS Dev Environment"
+echo "  code-server running at http://0.0.0.0:8080"
+echo ""
+echo "  First time setup — run in the terminal:"
+echo "    xtool setup"
+echo "================================================"
+
+exec code-server --bind-addr 0.0.0.0:8080
+EOF
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Fix ownership
 RUN chown -R vscode:vscode /home/vscode
@@ -175,4 +222,4 @@ EXPOSE 8080
 
 USER vscode
 
-CMD ["code-server", "--bind-addr", "0.0.0.0:8080"]
+CMD ["/usr/local/bin/entrypoint.sh"]
