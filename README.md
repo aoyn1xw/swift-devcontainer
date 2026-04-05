@@ -1,6 +1,7 @@
-# Swift Devcontainer (xtool + zsign + Theos)
+# Swift Devcontainer
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/aoyn1xw/swift-devcontainer?quickstart=1)
+[![Docker Hub](https://img.shields.io/docker/pulls/ayon1xw/swift-devcontainer)](https://hub.docker.com/r/ayon1xw/swift-devcontainer)
 
 A ready-to-use cloud dev environment for iOS-targeted Swift development without a Mac.
 This setup focuses on compiling, packaging, and signing iOS apps using free and open-source tools on Linux.
@@ -69,6 +70,42 @@ Copy the `.devcontainer/` folder into any repo, push to GitHub, and open a Codes
 2. Open in VS Code
 3. Run **Dev Containers: Reopen in Container**
 
+### Docker Compose & Code-Server
+
+You can also run this environment locally or on a remote server using Docker Compose:
+
+```bash
+docker compose up -d
+```
+
+Code-server will run on port `8080`. Access it in your browser at `http://localhost:8080`. The default password is `changeme`
+
+#### Troubleshooting: Blank Screen Behind Dev Tunnels
+
+If you are exposing code-server through a development tunnel (such as `devtunnels.ms` or `ngrok`) and the page loads blank, it is likely due to the tunnel blocking or mishandling WebSockets. 
+
+To fix this, configure `code-server` with your proxy domain. Run this command while the container is running (replace the `proxy-domain` value with your tunnel's domain):
+
+```bash
+docker compose exec swift-dev bash -c "mkdir -p /home/vscode/.config/code-server && cat > /home/vscode/.config/code-server/config.yaml << 'EOF'
+bind-addr: 0.0.0.0:8080
+auth: password
+password: changeme
+cert: false
+proxy-domain: your-tunnel-domain.devtunnels.ms
+EOF"
+```
+
+Then restart the container to apply the settings:
+
+```bash
+docker compose restart
+```
+
+*(Note: Applying this fix updates the login password to `changeme`)*
+
+If issues persist, use **VS Code's built-in tunnel** (`vscode.dev/tunnel/...`) instead of port forwarding port `8080`, as it is built to handle VS Code traffic properly.
+
 ---
 
 ## Repository Structure
@@ -121,3 +158,11 @@ This repo contains only configuration files. See the upstream tools for their ow
 - [xtool](https://github.com/xtool-org/xtool) - MIT
 - [zsign](https://github.com/zhlynn/zsign) — MIT
 - [Theos](https://github.com/theos/theos)
+
+---
+
+## Support & Requests
+
+If you have any requests, issues, or want to contribute:
+- **GitHub Issues**: Please open an issue in this repository for bugs or feature requests.
+- **Discord**: Feel free to reach out to me on Discord at `ayon1xw` for questions and support.
