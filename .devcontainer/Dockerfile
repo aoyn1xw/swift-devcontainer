@@ -222,4 +222,4 @@ EXPOSE 8080
 
 USER vscode
 
-CMD ["/usr/local/bin/entrypoint.sh"]
+CMD ["code-server", "--bind-addr", "0.0.0.0:8080", "--auth", "password"]
