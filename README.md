@@ -5,6 +5,8 @@
 
 Build and sign iOS apps on Linux — no Mac, no Xcode.
 
+![Demo of the Swift devcontainer](demo.gif)
+
 ---
 
 ## What's Included
