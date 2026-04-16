@@ -1,0 +1,70 @@
+name: Build and Push Devcontainer Image
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-test-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build image for verification
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: .devcontainer/Dockerfile
+          load: true
+          push: false
+          tags: swift-devcontainer:test-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Verify Swift version
+        run: docker run --rm swift-devcontainer:test-${{ github.sha }} swift --version
+
+      - name: Verify xtool help
+        run: docker run --rm swift-devcontainer:test-${{ github.sha }} xtool --help
+
+      - name: Verify zsign help
+        run: docker run --rm swift-devcontainer:test-${{ github.sha }} zsign -h
+
+      - name: Verify Theos directory
+        run: docker run --rm swift-devcontainer:test-${{ github.sha }} test -d /opt/theos
+
+      - name: Build and push to Docker Hub and GHCR
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: .devcontainer/Dockerfile
+          push: true
+          tags: |
+            ayon1xw/swift-devcontainer:latest
+            ayon1xw/swift-devcontainer:${{ github.sha }}
+            ghcr.io/aoyn1xw/swift-devcontainer:latest
+            ghcr.io/aoyn1xw/swift-devcontainer:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
