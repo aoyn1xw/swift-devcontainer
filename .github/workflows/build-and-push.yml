@@ -50,7 +50,9 @@ jobs:
         run: docker run --rm swift-devcontainer:test-${{ github.sha }} xtool --help
 
       - name: Verify zsign help
-        run: docker run --rm swift-devcontainer:test-${{ github.sha }} bash -c "zsign -h 2>&1 | grep -Eq 'Usage: zsign|codesign alternative'"
+        run: |
+          docker run --rm swift-devcontainer:test-${{ github.sha }} bash -c \
+            "zsign -h 2>&1 | grep -Eq 'Usage: zsign|codesign alternative'"
 
       - name: Verify Theos directory
         run: docker run --rm swift-devcontainer:test-${{ github.sha }} test -d /opt/theos
