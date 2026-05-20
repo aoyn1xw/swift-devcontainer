@@ -13,7 +13,7 @@ Build and sign iOS apps on Linux — no Mac, no Xcode.
 
 | Tool | Purpose |
 |------|---------|
-| Swift 6.2.3 | Compile Swift packages and iOS-targeted apps |
+| Swift 6.3 | Compile Swift packages and iOS-targeted apps |
 | xtool | Cross-compile Swift for iOS on Linux |
 | zsign | Sign IPAs without Xcode |
 | Theos | iOS tweak and app development |

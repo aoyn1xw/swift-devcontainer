@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ------------------------------------------------------------
 # Swift 6.2 (pinned)
 # ------------------------------------------------------------
-ARG SWIFT_VERSION=6.2
+ARG SWIFT_VERSION=6.3
 RUN set -eux; \
   ARCH="$(uname -m)"; \
   if [ "$ARCH" = "aarch64" ]; then \
