@@ -9,6 +9,11 @@
   "mounts": [
     "source=swift-spm-cache,target=/home/vscode/.cache/org.swift.swiftpm,type=volume"
   ],
+  "features": {
+    "ghcr.io/devcontainers/features/sshd:1": {
+      "version": "latest"
+    }
+  },
   "customizations": {
     "vscode": {
       "extensions": [
