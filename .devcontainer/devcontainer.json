@@ -9,6 +9,9 @@
   "mounts": [
     "source=swift-spm-cache,target=/home/vscode/.cache/org.swift.swiftpm,type=volume"
   ],
+  "containerEnv": {
+    "CODE_SERVER_PASSWORD": "${localEnv:CODE_SERVER_PASSWORD}"
+  },
   "features": {
     "ghcr.io/devcontainers/features/sshd:1": {
       "version": "latest"
@@ -29,5 +32,5 @@
   },
   "remoteUser": "vscode",
   "postAttachCommand": "onboard --if-needed",
-  "postCreateCommand": "swift --version && xtool --help && echo 'THEOS='$THEOS"
+  "postCreateCommand": "configure-passwords --non-interactive && swift --version && xtool --help && echo 'THEOS='$THEOS",
 }

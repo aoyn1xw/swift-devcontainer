@@ -61,6 +61,9 @@ jobs:
       - name: Verify onboarding script
         run: docker run --rm swift-devcontainer:test-${{ github.sha }} onboard --status
 
+      - name: Verify password configuration script
+        run: docker run --rm -e CODE_SERVER_PASSWORD=ci-test-password swift-devcontainer:test-${{ github.sha }} configure-passwords --status
+
       - name: Build and push to Docker Hub and GHCR
         uses: docker/build-push-action@v5
         with:

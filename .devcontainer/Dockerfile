@@ -124,7 +124,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   # iOS device
   usbmuxd libimobiledevice-utils \
   # Essentials
-  git curl ca-certificates \
+  git curl ca-certificates python3-minimal \
   && rm -rf /var/lib/apt/lists/* \
   && apt-get clean \
   && rm -rf /tmp/* /var/tmp/*
@@ -136,8 +136,9 @@ COPY --from=builder /opt/theos /opt/theos
 
 # Onboarding wizard
 COPY .devcontainer/onboard.sh /usr/local/bin/onboard
+COPY .devcontainer/configure-passwords.sh /usr/local/bin/configure-passwords
 COPY .devcontainer/profile-onboard.sh /etc/profile.d/99-swift-dev-onboard.sh
-RUN chmod +x /usr/local/bin/onboard
+RUN chmod +x /usr/local/bin/onboard /usr/local/bin/configure-passwords
 
 # Symlinks + permissions
 RUN ln -sf /opt/xtool/AppRun /usr/local/bin/xtool \
@@ -181,16 +182,12 @@ RUN mkdir -p /home/vscode/.local/share/code-server/User && \
 }
 EOF
 
-# Entrypoint script — applies CODE_SERVER_PASSWORD env var at runtime
+# Entrypoint — apply passwords from env, then start code-server
 RUN cat > /usr/local/bin/entrypoint.sh <<'EOF'
 #!/bin/bash
 set -e
 
-# Override password if env var is set
-if [ -n "$CODE_SERVER_PASSWORD" ]; then
-  sed -i "s/^password:.*/password: ${CODE_SERVER_PASSWORD}/" \
-    /home/vscode/.config/code-server/config.yaml
-fi
+/usr/local/bin/configure-passwords --non-interactive
 
 echo "================================================"
 echo "  Swift iOS Dev Environment"
@@ -202,7 +199,7 @@ echo ""
 echo "  Or onboarding starts automatically on first login."
 echo "================================================"
 
-exec code-server --bind-addr 0.0.0.0:8080
+exec code-server --bind-addr 0.0.0.0:8080 --auth password
 EOF
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
@@ -229,4 +226,4 @@ EXPOSE 8080
 
 USER vscode
 
-CMD ["code-server", "--bind-addr", "0.0.0.0:8080", "--auth", "password"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

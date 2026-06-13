@@ -5,12 +5,16 @@ services:
       dockerfile: .devcontainer/Dockerfile
     ports:
       - "8080:8080"
+    env_file:
+      - path: .env
+        required: false
     environment:
-      - CODE_SERVER_PASSWORD=yourpassword
+      CODE_SERVER_PASSWORD: ${CODE_SERVER_PASSWORD:-}
     volumes:
       - swift-spm-cache:/home/vscode/.cache/org.swift.swiftpm
       - xtool-config:/home/vscode/.config/xtool
       - onboarding-state:/home/vscode/.config/swift-devcontainer
+      - code-server-config:/home/vscode/.config/code-server
       - project:/home/vscode/project
     restart: unless-stopped
     deploy:
@@ -24,4 +28,5 @@ volumes:
   swift-spm-cache:
   xtool-config:
   onboarding-state:
+  code-server-config:
   project:

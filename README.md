@@ -26,10 +26,14 @@ Build and sign iOS apps on Linux — no Mac, no Xcode.
 
 **VS Code** — clone the repo, open it, run `Dev Containers: Reopen in Container`.
 
-**Docker Compose** — runs code-server on port `8080`, password `changeme`:
+**Docker Compose** — runs code-server on port `8080`. Set your password first:
+
 ```bash
+cp .env.example .env   # edit CODE_SERVER_PASSWORD
 docker compose up -d
 ```
+
+Default login password is `changeme` until you set `.env` or run `onboard`.
 
 Verify everything works:
 ```sh
@@ -38,15 +42,18 @@ swift --version && xtool --help && zsign -h && ls $THEOS
 
 ### First-time onboarding
 
-On first launch, an interactive guide walks you through setup step by step (Swift check → `xtool setup` → next commands). It starts automatically when you open a terminal or attach to the dev container.
+On first launch, an interactive guide walks you through setup step by step (passwords → Swift check → `xtool setup` → next commands). It starts automatically when you open a terminal or attach to the dev container.
 
 ```sh
 onboard              # run the full walkthrough
 onboard --status     # see what's configured
 onboard --reset      # start over
+configure-passwords --interactive   # change passwords later
 ```
 
 You'll need an Apple Developer account and a downloaded **Xcode.xip** before the xtool step. See the [xtool Linux install guide](https://xtool.sh/documentation/xtooldocs/installation-linux).
+
+**Passwords:** set `CODE_SERVER_PASSWORD` in `.env` (Docker Compose) or your shell before opening the dev container. Onboarding also prompts you to replace the default `changeme` password and optionally set an SSH password.
 
 Set `SKIP_ONBOARDING=1` to disable auto-start.
 

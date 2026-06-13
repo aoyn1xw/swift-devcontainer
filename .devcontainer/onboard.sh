@@ -6,6 +6,15 @@ STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/swift-devcontainer"
 MARKER_FILE="$STATE_DIR/onboarding.complete"
 LOCK_FILE="$STATE_DIR/.onboard.lock"
 
+# shellcheck source=/dev/null
+if [[ -f /usr/local/bin/configure-passwords ]]; then
+  source /usr/local/bin/configure-passwords
+else
+  is_code_server_password_configured() {
+    [[ -n "${CODE_SERVER_PASSWORD:-}" ]] || [[ -f "$STATE_DIR/passwords.configured" ]]
+  }
+fi
+
 if [[ -t 1 ]]; then
   BOLD='\033[1m'
   DIM='\033[2m'
@@ -82,7 +91,7 @@ is_xtool_configured() {
 }
 
 is_onboarding_complete() {
-  [[ -f "$MARKER_FILE" ]] && is_xtool_configured
+  [[ -f "$MARKER_FILE" ]] && is_xtool_configured && is_code_server_password_configured
 }
 
 mark_complete() {
@@ -96,6 +105,11 @@ clear_marker() {
 
 show_status() {
   printf '%sSwift iOS Dev Environment — setup status%s\n\n' "$BOLD" "$RESET"
+
+  if declare -F show_password_status >/dev/null 2>&1; then
+    show_password_status
+    echo
+  fi
 
   if run_checked "Swift toolchain" swift --version; then true; else false; fi
   if run_checked "xtool CLI" xtool --help >/dev/null; then true; else false; fi
@@ -135,17 +149,41 @@ step_welcome() {
 This environment lets you build and sign iOS apps on Linux — no Mac required.
 
 You'll walk through:
-  1. Verify the pre-installed toolchain (Swift, xtool, zsign, Theos)
-  2. Run ${BOLD}xtool setup${RESET} (Apple login + Xcode.xip for the iOS SDK)
-  3. Learn the usual next commands for building and deploying
+  1. Set a secure ${BOLD}code-server${RESET} password (and optional SSH password)
+  2. Verify the pre-installed toolchain (Swift, xtool, zsign, Theos)
+  3. Run ${BOLD}xtool setup${RESET} (Apple login + Xcode.xip for the iOS SDK)
+  4. Learn the usual next commands for building and deploying
 
 ${DIM}Tip: run ${RESET}onboard --status${DIM} anytime to check progress.${RESET}
 EOF
   pause
 }
 
+step_configure_passwords() {
+  log_step 2 "Configure passwords"
+  cat <<EOF
+${BOLD}code-server${RESET} protects the in-browser IDE on port ${BOLD}8080${RESET}.
+You can also set ${BOLD}CODE_SERVER_PASSWORD${RESET} in a ${BOLD}.env${RESET} file before starting Docker Compose.
+
+If SSH is enabled, you can optionally set a login password for user ${BOLD}${USER}${RESET}.
+EOF
+
+  if declare -F configure_passwords >/dev/null 2>&1; then
+    if ! configure_passwords --interactive "true"; then
+      printf '\n%sPassword setup incomplete.%s Run %sonboard%s again to continue.\n' \
+        "$YELLOW" "$RESET" "$CYAN" "$RESET"
+      exit 0
+    fi
+  else
+    printf '%sconfigure-passwords is not installed in this environment.%s\n' "$YELLOW" "$RESET"
+    exit 0
+  fi
+
+  pause
+}
+
 step_verify_toolchain() {
-  log_step 2 "Verify pre-installed tools"
+  log_step 3 "Verify pre-installed tools"
   printf 'These were baked into the image at build time:\n\n'
 
   run_checked "Swift" swift --version || true
@@ -163,7 +201,7 @@ step_verify_toolchain() {
 }
 
 step_xtool_prerequisites() {
-  log_step 3 "Prepare for xtool setup"
+  log_step 4 "Prepare for xtool setup"
   cat <<EOF
 ${BOLD}xtool setup${RESET} is interactive and needs two things from you:
 
@@ -183,7 +221,7 @@ EOF
 }
 
 step_xtool_setup() {
-  log_step 4 "Run xtool setup"
+  log_step 5 "Run xtool setup"
   cat <<EOF
 ${BOLD}xtool setup${RESET} will:
   • Authenticate with your Apple Developer account
@@ -222,7 +260,7 @@ EOF
 }
 
 step_next_steps() {
-  log_step 5 "You're ready — common next commands"
+  log_step 6 "You're ready — common next commands"
   cat <<EOF
 ${BOLD}Create a new iOS app project${RESET}
   xtool new MyApp
@@ -248,7 +286,7 @@ EOF
 }
 
 step_finish() {
-  log_step 6 "All set"
+  log_step 7 "All set"
   mark_complete
   cat <<EOF
 ${GREEN}Onboarding complete.${RESET}
@@ -262,8 +300,9 @@ EOF
 }
 
 run_onboarding() {
-  TOTAL_STEPS=6
+  TOTAL_STEPS=7
   step_welcome
+  step_configure_passwords
   step_verify_toolchain
   step_xtool_prerequisites
   step_xtool_setup
@@ -315,7 +354,7 @@ ${BOLD}Swift iOS Dev Environment — first-time setup${RESET}
 
 Open a terminal and run: ${CYAN}onboard${RESET}
 
-You'll need an Apple Developer account and Xcode.xip for the xtool step.
+You'll set a code-server password, then complete xtool setup with your Apple account and Xcode.xip.
 Status: ${CYAN}onboard --status${RESET}
 
 EOF
