@@ -13,7 +13,7 @@ Build and sign iOS apps on Linux — no Mac, no Xcode.
 
 | Tool | Purpose |
 |------|---------|
-| Swift 6.3 | Compile Swift packages and iOS-targeted apps |
+| Swift 6.3.2 | Compile Swift packages and iOS-targeted apps |
 | xtool | Cross-compile Swift for iOS on Linux |
 | zsign | Sign IPAs without Xcode |
 | Theos | iOS tweak and app development |
@@ -35,6 +35,20 @@ Verify everything works:
 ```sh
 swift --version && xtool --help && zsign -h && ls $THEOS
 ```
+
+### First-time onboarding
+
+On first launch, an interactive guide walks you through setup step by step (Swift check → `xtool setup` → next commands). It starts automatically when you open a terminal or attach to the dev container.
+
+```sh
+onboard              # run the full walkthrough
+onboard --status     # see what's configured
+onboard --reset      # start over
+```
+
+You'll need an Apple Developer account and a downloaded **Xcode.xip** before the xtool step. See the [xtool Linux install guide](https://xtool.sh/documentation/xtooldocs/installation-linux).
+
+Set `SKIP_ONBOARDING=1` to disable auto-start.
 
 ---
 

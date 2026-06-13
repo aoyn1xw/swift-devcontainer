@@ -10,6 +10,7 @@ services:
     volumes:
       - swift-spm-cache:/home/vscode/.cache/org.swift.swiftpm
       - xtool-config:/home/vscode/.config/xtool
+      - onboarding-state:/home/vscode/.config/swift-devcontainer
       - project:/home/vscode/project
     restart: unless-stopped
     deploy:
@@ -22,4 +23,5 @@ services:
 volumes:
   swift-spm-cache:
   xtool-config:
+  onboarding-state:
   project:

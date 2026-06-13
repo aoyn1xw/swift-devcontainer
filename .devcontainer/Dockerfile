@@ -17,9 +17,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && rm -rf /var/lib/apt/lists/*
 
 # ------------------------------------------------------------
-# Swift 6.2 (pinned)
+# Swift 6.3.2 (pinned)
 # ------------------------------------------------------------
-ARG SWIFT_VERSION=6.3
+ARG SWIFT_VERSION=6.3.2
 RUN set -eux; \
   ARCH="$(uname -m)"; \
   if [ "$ARCH" = "aarch64" ]; then \
@@ -134,6 +134,11 @@ COPY --from=builder /usr/local /usr/local
 COPY --from=builder /opt/xtool /opt/xtool
 COPY --from=builder /opt/theos /opt/theos
 
+# Onboarding wizard
+COPY .devcontainer/onboard.sh /usr/local/bin/onboard
+COPY .devcontainer/profile-onboard.sh /etc/profile.d/99-swift-dev-onboard.sh
+RUN chmod +x /usr/local/bin/onboard
+
 # Symlinks + permissions
 RUN ln -sf /opt/xtool/AppRun /usr/local/bin/xtool \
   && chown -R vscode:vscode /opt/theos \
@@ -191,8 +196,10 @@ echo "================================================"
 echo "  Swift iOS Dev Environment"
 echo "  code-server running at http://0.0.0.0:8080"
 echo ""
-echo "  First time setup — run in the terminal:"
-echo "    xtool setup"
+echo "  First time? Open a terminal and run:"
+echo "    onboard"
+echo ""
+echo "  Or onboarding starts automatically on first login."
 echo "================================================"
 
 exec code-server --bind-addr 0.0.0.0:8080

@@ -44,7 +44,8 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Verify Swift version
-        run: docker run --rm swift-devcontainer:test-${{ github.sha }} swift --version
+        run: |
+          docker run --rm swift-devcontainer:test-${{ github.sha }} swift --version | grep -F 'Swift version 6.3.2'
 
       - name: Verify xtool help
         run: docker run --rm swift-devcontainer:test-${{ github.sha }} xtool --help
@@ -57,6 +58,9 @@ jobs:
       - name: Verify Theos directory
         run: docker run --rm swift-devcontainer:test-${{ github.sha }} test -d /opt/theos
 
+      - name: Verify onboarding script
+        run: docker run --rm swift-devcontainer:test-${{ github.sha }} onboard --status
+
       - name: Build and push to Docker Hub and GHCR
         uses: docker/build-push-action@v5
         with:
@@ -65,8 +69,10 @@ jobs:
           push: true
           tags: |
             ayon1xw/swift-devcontainer:latest
+            ayon1xw/swift-devcontainer:6.3.2
             ayon1xw/swift-devcontainer:${{ github.sha }}
             ghcr.io/aoyn1xw/swift-devcontainer:latest
+            ghcr.io/aoyn1xw/swift-devcontainer:6.3.2
             ghcr.io/aoyn1xw/swift-devcontainer:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

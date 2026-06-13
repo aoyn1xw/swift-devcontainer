@@ -23,5 +23,6 @@
     }
   },
   "remoteUser": "vscode",
- "postCreateCommand": "swift --version && xtool --help && echo 'THEOS='$THEOS"
+  "postAttachCommand": "onboard --if-needed",
+  "postCreateCommand": "swift --version && xtool --help && echo 'THEOS='$THEOS"
 }
