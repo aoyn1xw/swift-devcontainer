@@ -125,6 +125,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   usbmuxd libimobiledevice-utils \
   # Essentials
   git curl ca-certificates \
+  # SSH server (for Cursor Remote-SSH support)
+  openssh-server \
+  && mkdir -p /var/run/sshd \
+  && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config \
+  && sed -i 's/#PubkeyAuthentication yes/PubkeyAuthentication yes/' /etc/ssh/sshd_config \
   && rm -rf /var/lib/apt/lists/* \
   && apt-get clean \
   && rm -rf /tmp/* /var/tmp/*
@@ -225,7 +230,7 @@ RUN { \
 # ------------------------------------------------------------
 RUN swift --version && xtool --help && which zsign && test -d /opt/theos
 
-EXPOSE 8080
+EXPOSE 8080 2222
 
 USER vscode
 
