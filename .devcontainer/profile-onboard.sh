@@ -1,5 +1,5 @@
 # Launch onboarding once per login session on first interactive shell.
-if [[ -n "${PS1:-}" ]] \
+if [[ $- == *i* ]] \
   && [[ -z "${SWIFT_DEV_ONBOARDING_SESSION:-}" ]] \
   && [[ "${SKIP_ONBOARDING:-}" != "1" ]] \
   && [[ -x /usr/local/bin/onboard ]]; then

@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Swift 6.3.2 (pinned)
 # ------------------------------------------------------------
 ARG SWIFT_VERSION=6.3.2
+ARG XTOOL_VERSION=latest
 RUN set -eux; \
   ARCH="$(uname -m)"; \
   if [ "$ARCH" = "aarch64" ]; then \
@@ -40,8 +41,14 @@ RUN set -eux; \
 # ------------------------------------------------------------
 # xtool binary only (no setup — done interactively at runtime)
 # ------------------------------------------------------------
+# XTOOL_VERSION=latest (default) or a tag e.g. v1.2.3
 RUN set -eux; \
-  curl -fsSL "https://github.com/xtool-org/xtool/releases/latest/download/xtool-$(uname -m).AppImage" \
+  if [ "$XTOOL_VERSION" = "latest" ]; then \
+    XTOOL_URL="https://github.com/xtool-org/xtool/releases/latest/download/xtool-$(uname -m).AppImage"; \
+  else \
+    XTOOL_URL="https://github.com/xtool-org/xtool/releases/download/${XTOOL_VERSION}/xtool-$(uname -m).AppImage"; \
+  fi; \
+  curl -fsSL "$XTOOL_URL" \
     -o /tmp/xtool.AppImage; \
   chmod +x /tmp/xtool.AppImage; \
   cd /tmp && APPIMAGE_EXTRACT_AND_RUN=1 ./xtool.AppImage --appimage-extract 2>&1 || true; \
@@ -167,7 +174,7 @@ RUN mkdir -p /home/vscode/.config/code-server && \
   cat > /home/vscode/.config/code-server/config.yaml <<'EOF'
 bind-addr: 0.0.0.0:8080
 auth: password
-password: changeme
+password: CHANGE_ME_SET_CODE_SERVER_PASSWORD_ENV
 cert: false
 EOF
 

@@ -51,29 +51,6 @@ pause() {
   read -r _
 }
 
-ask_yes_no() {
-  local prompt="$1"
-  local default="${2:-y}"
-  local hint choice
-
-  if [[ "$default" == "y" ]]; then
-    hint="Y/n"
-  else
-    hint="y/N"
-  fi
-
-  while true; do
-    printf '%s [%s]: ' "$prompt" "$hint"
-    read -r choice
-    choice="${choice:-$default}"
-    case "${choice,,}" in
-      y|yes) return 0 ;;
-      n|no) return 1 ;;
-      *) printf 'Please answer y or n.\n' ;;
-    esac
-  done
-}
-
 run_checked() {
   local label="$1"
   shift

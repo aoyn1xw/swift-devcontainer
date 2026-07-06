@@ -33,7 +33,9 @@ cp .env.example .env   # edit CODE_SERVER_PASSWORD
 docker compose up -d
 ```
 
-Default login password is `changeme` until you set `.env` or run `onboard`.
+Port `2222` is also mapped for SSH access (used by Cursor Remote-SSH). Both ports are included in `docker-compose.yml` by default.
+
+> **Note:** `CODE_SERVER_PASSWORD` must be set in `.env` (or as an environment variable) before starting. Startup will fail clearly if it is not set — the image no longer ships with a default `changeme` password baked in.
 
 Verify everything works:
 ```sh

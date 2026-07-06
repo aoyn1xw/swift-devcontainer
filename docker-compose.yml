@@ -5,6 +5,7 @@ services:
       dockerfile: .devcontainer/Dockerfile
     ports:
       - "8080:8080"
+      - "2222:2222"
     env_file:
       - path: .env
         required: false
