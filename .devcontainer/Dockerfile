@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ------------------------------------------------------------
 # Swift 6.3.2 (pinned)
 # ------------------------------------------------------------
-ARG SWIFT_VERSION=6.3.2
+ARG SWIFT_VERSION=6.3.3
 ARG XTOOL_VERSION=latest
 RUN set -eux; \
   ARCH="$(uname -m)"; \
@@ -146,11 +146,12 @@ COPY --from=builder /usr/local /usr/local
 COPY --from=builder /opt/xtool /opt/xtool
 COPY --from=builder /opt/theos /opt/theos
 
-# Onboarding wizard
+# Onboarding wizard + fetch-xcode
 COPY .devcontainer/onboard.sh /usr/local/bin/onboard
 COPY .devcontainer/configure-passwords.sh /usr/local/bin/configure-passwords
+COPY .devcontainer/fetch-xcode.sh /usr/local/bin/fetch-xcode
 COPY .devcontainer/profile-onboard.sh /etc/profile.d/99-swift-dev-onboard.sh
-RUN chmod +x /usr/local/bin/onboard /usr/local/bin/configure-passwords
+RUN chmod +x /usr/local/bin/onboard /usr/local/bin/configure-passwords /usr/local/bin/fetch-xcode
 
 # Symlinks + permissions
 RUN ln -sf /opt/xtool/AppRun /usr/local/bin/xtool \

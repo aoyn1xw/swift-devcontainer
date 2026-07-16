@@ -186,11 +186,13 @@ ${BOLD}xtool setup${RESET} is interactive and needs two things from you:
      Free or paid — used only to talk to Apple's services.
 
   ${BOLD}2. Xcode.xip${RESET}
-     Download from Apple (Xcode 16.3+ recommended):
-     https://developer.apple.com/download/all/
+     Use the built-in downloader (fetches latest automatically):
+       ${CYAN}fetch-xcode${RESET}
 
-     Upload or copy the file into this environment before continuing.
-     In Codespaces, drag the file into the file explorer or use scp.
+     Or download manually from Apple:
+       https://developer.apple.com/download/all/
+
+     Run ${CYAN}fetch-xcode --list${RESET} to see available versions.
 
 ${YELLOW}The SDK extraction can take several minutes and uses a lot of disk space.${RESET}
 EOF

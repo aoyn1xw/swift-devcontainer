@@ -13,10 +13,11 @@ Build and sign iOS apps on Linux — no Mac, no Xcode.
 
 | Tool | Purpose |
 |------|---------|
-| Swift 6.3.2 | Compile Swift packages and iOS-targeted apps |
+| Swift 6.3.3 | Compile Swift packages and iOS-targeted apps |
 | xtool | Cross-compile Swift for iOS on Linux |
 | zsign | Sign IPAs without Xcode |
 | Theos | iOS tweak and app development |
+| fetch-xcode | Download Xcode.xip from Apple CDN (via xcodereleases.com) |
 
 ---
 
@@ -53,7 +54,15 @@ onboard --reset      # start over
 configure-passwords --interactive   # change passwords later
 ```
 
-You'll need an Apple Developer account and a downloaded **Xcode.xip** before the xtool step. See the [xtool Linux install guide](https://xtool.sh/documentation/xtooldocs/installation-linux).
+You'll need an Apple Developer account and an **Xcode.xip** before the xtool step. Use the built-in downloader:
+
+```sh
+fetch-xcode              # download latest stable Xcode.xip
+fetch-xcode --list       # see available versions
+fetch-xcode --version 16.3  # specific version
+```
+
+See the [xtool Linux install guide](https://xtool.sh/documentation/xtooldocs/installation-linux) for more details.
 
 **Passwords:** set `CODE_SERVER_PASSWORD` in `.env` (Docker Compose) or your shell before opening the dev container. Onboarding also prompts you to replace the default `changeme` password and optionally set an SSH password.
 

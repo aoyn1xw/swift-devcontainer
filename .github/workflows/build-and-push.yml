@@ -45,7 +45,7 @@ jobs:
 
       - name: Verify Swift version
         run: |
-          docker run --rm swift-devcontainer:test-${{ github.sha }} swift --version | grep -F 'Swift version 6.3.2'
+          docker run --rm swift-devcontainer:test-${{ github.sha }} swift --version | grep -F 'Swift version 6.3.3'
 
       - name: Verify xtool help
         run: docker run --rm swift-devcontainer:test-${{ github.sha }} xtool --help
@@ -64,6 +64,9 @@ jobs:
       - name: Verify password configuration script
         run: docker run --rm -e CODE_SERVER_PASSWORD=ci-test-password swift-devcontainer:test-${{ github.sha }} configure-passwords --status
 
+      - name: Verify fetch-xcode script
+        run: docker run --rm swift-devcontainer:test-${{ github.sha }} fetch-xcode --help
+
       - name: Build and push to Docker Hub and GHCR
         uses: docker/build-push-action@v5
         with:
@@ -72,10 +75,10 @@ jobs:
           push: true
           tags: |
             ayon1xw/swift-devcontainer:latest
-            ayon1xw/swift-devcontainer:6.3.2
+            ayon1xw/swift-devcontainer:6.3.3
             ayon1xw/swift-devcontainer:${{ github.sha }}
             ghcr.io/aoyn1xw/swift-devcontainer:latest
-            ghcr.io/aoyn1xw/swift-devcontainer:6.3.2
+            ghcr.io/aoyn1xw/swift-devcontainer:6.3.3
             ghcr.io/aoyn1xw/swift-devcontainer:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
