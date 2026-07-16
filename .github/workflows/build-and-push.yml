@@ -55,8 +55,10 @@ jobs:
           docker run --rm swift-devcontainer:test-${{ github.sha }} bash -c \
             "zsign -h 2>&1 | grep -Eq 'Usage: zsign|codesign alternative'"
 
-      - name: Verify Theos directory
-        run: docker run --rm swift-devcontainer:test-${{ github.sha }} test -d /opt/theos
+      - name: Verify Theos directory and installer
+        run: |
+          docker run --rm swift-devcontainer:test-${{ github.sha }} bash -c \
+            "test -d /opt/theos && test -x /usr/local/bin/install-theos"
 
       - name: Verify onboarding script
         run: docker run --rm swift-devcontainer:test-${{ github.sha }} onboard --status

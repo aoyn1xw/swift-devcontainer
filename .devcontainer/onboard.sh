@@ -198,13 +198,33 @@ step_verify_toolchain() {
     fail "zsign not found"; all_ok=false
   fi
 
-  if [[ -d "${THEOS:-/opt/theos}" ]]; then
+  if [[ -d "${THEOS:-/opt/theos}/makefiles" ]]; then
     success "Theos at ${THEOS:-/opt/theos}"
   else
-    warn "Theos not found (optional)"
+    warn "Theos not installed (run ${CYAN}install-theos${RESET})"
   fi
 
   $all_ok && success "All core tools ready" || warn "Some tools missing"
+}
+
+step_install_theos() {
+  section "Install Theos"
+
+  if [[ -d "${THEOS:-/opt/theos}/makefiles" ]]; then
+    success "Theos already installed"
+    return 0
+  fi
+
+  info "Theos lets you build iOS tweaks and apps."
+  info "Downloads ~400MB (toolchain + SDKs)."
+  printf '\n'
+
+  if ! ask_yes_no "Install Theos now?" "y"; then
+    info "Skipped. Run ${CYAN}install-theos${RESET} later."
+    return 0
+  fi
+
+  install-theos
 }
 
 step_fetch_xcode() {
@@ -325,7 +345,7 @@ show_status() {
 
   if xtool --help >/dev/null 2>&1; then success "xtool"; else fail "xtool"; fi
   if zsign -h >/dev/null 2>&1; then success "zsign"; else fail "zsign"; fi
-  if [[ -d "${THEOS:-/opt/theos}" ]]; then success "Theos"; else warn "Theos (optional)"; fi
+  if [[ -d "${THEOS:-/opt/theos}/makefiles" ]]; then success "Theos"; else warn "Theos not installed (run ${CYAN}install-theos${RESET})"; fi
 
   echo
   if is_xtool_configured; then
@@ -353,11 +373,12 @@ run_onboarding() {
 
   # Component selection
   local components=("Security (code-server & SSH passwords)"
-                    "Verify toolchain (Swift, xtool, zsign, Theos)"
+                    "Verify toolchain (Swift, xtool, zsign)"
+                    "Install Theos (iOS tweak toolkit, ~400MB)"
                     "Download Xcode.xip"
                     "iOS SDK setup (xtool setup — needs Apple account)"
                     "Show quick-reference commands")
-  local defaults=(1 1 1 1 1)
+  local defaults=(1 1 1 1 1 1)
 
   pick_components "What would you like to set up?" components defaults
   save_choices
@@ -383,15 +404,20 @@ run_onboarding() {
 
   if [[ "${PICKED[2]}" == "1" ]]; then
     ((step++))
-    step_fetch_xcode
+    step_install_theos
   fi
 
   if [[ "${PICKED[3]}" == "1" ]]; then
     ((step++))
-    step_xtool_setup
+    step_fetch_xcode
   fi
 
   if [[ "${PICKED[4]}" == "1" ]]; then
+    ((step++))
+    step_xtool_setup
+  fi
+
+  if [[ "${PICKED[5]}" == "1" ]]; then
     ((step++))
     step_next_steps
   fi

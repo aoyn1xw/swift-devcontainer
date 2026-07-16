@@ -1,88 +1,50 @@
 # ============================================================
-# Stage 1: Builder — download & compile everything heavy
+# Stage 1: Builder — compile zsign + minizip-ng + extract xtool
 # ============================================================
-FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04 AS builder
+FROM swift:6.3.3-noble AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV PATH="/usr/local/bin:$PATH"
 
-# Build deps only needed at compile time
-RUN apt-get update && apt-get install -y --no-install-recommends \
-  git curl ca-certificates tar xz-utils \
-  build-essential pkg-config \
-  libssl-dev libminizip-dev liblzma-dev \
-  libplist-dev libzip-dev \
-  libxml2-dev libz3-dev \
-  libncurses-dev \
-  && rm -rf /var/lib/apt/lists/*
+# Build deps (cached layer)
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
+    curl ca-certificates git \
+    build-essential pkg-config cmake \
+    libssl-dev libminizip-dev liblzma-dev zlib1g-dev \
+    libplist-dev libzip-dev \
+    && true
 
-# ------------------------------------------------------------
-# Swift 6.3.2 (pinned)
-# ------------------------------------------------------------
-ARG SWIFT_VERSION=6.3.3
+# xtool — extract AppImage
 ARG XTOOL_VERSION=latest
-RUN set -eux; \
-  ARCH="$(uname -m)"; \
-  if [ "$ARCH" = "aarch64" ]; then \
-    SWIFT_URL="https://download.swift.org/swift-${SWIFT_VERSION}-release/ubuntu2404-aarch64/swift-${SWIFT_VERSION}-RELEASE/swift-${SWIFT_VERSION}-RELEASE-ubuntu24.04-aarch64.tar.gz"; \
-  else \
-    SWIFT_URL="https://download.swift.org/swift-${SWIFT_VERSION}-release/ubuntu2404/swift-${SWIFT_VERSION}-RELEASE/swift-${SWIFT_VERSION}-RELEASE-ubuntu24.04.tar.gz"; \
-  fi; \
-  echo "Downloading Swift ${SWIFT_VERSION} from ${SWIFT_URL}"; \
-  curl -fsSL "$SWIFT_URL" -o /tmp/swift.tar.gz; \
-  mkdir -p /tmp/swift; \
-  tar xzf /tmp/swift.tar.gz -C /tmp/swift --strip-components=1; \
-  find /tmp/swift/usr -name "*.so" | xargs strip --strip-debug 2>/dev/null || true; \
-  find /tmp/swift/usr -name "swift-*" -type f | xargs strip --strip-debug 2>/dev/null || true; \
-  cp -r /tmp/swift/usr/* /usr/local/; \
-  rm -rf /tmp/swift /tmp/swift.tar.gz; \
-  swift --version
-
-# ------------------------------------------------------------
-# xtool binary only (no setup — done interactively at runtime)
-# ------------------------------------------------------------
-# XTOOL_VERSION=latest (default) or a tag e.g. v1.2.3
 RUN set -eux; \
   if [ "$XTOOL_VERSION" = "latest" ]; then \
     XTOOL_URL="https://github.com/xtool-org/xtool/releases/latest/download/xtool-$(uname -m).AppImage"; \
   else \
     XTOOL_URL="https://github.com/xtool-org/xtool/releases/download/${XTOOL_VERSION}/xtool-$(uname -m).AppImage"; \
   fi; \
-  curl -fsSL "$XTOOL_URL" \
-    -o /tmp/xtool.AppImage; \
+  curl -fsSL "$XTOOL_URL" -o /tmp/xtool.AppImage; \
   chmod +x /tmp/xtool.AppImage; \
   cd /tmp && APPIMAGE_EXTRACT_AND_RUN=1 ./xtool.AppImage --appimage-extract 2>&1 || true; \
-  if [ ! -d /tmp/squashfs-root ]; then \
-    echo "ERROR: AppImage extraction failed"; exit 1; \
-  fi; \
+  test -d /tmp/squashfs-root || { echo "AppImage extraction failed"; exit 1; }; \
   mkdir -p /opt/xtool; \
   cp -r /tmp/squashfs-root/* /opt/xtool/; \
   chmod +x /opt/xtool/AppRun; \
   rm -rf /tmp/xtool.AppImage /tmp/squashfs-root
 
-# ------------------------------------------------------------
-# minizip-ng (build from source)
-# ------------------------------------------------------------
+# minizip-ng (needed by zsign)
 RUN set -eux; \
-  apt-get update && apt-get install -y --no-install-recommends cmake zlib1g-dev \
-  && rm -rf /var/lib/apt/lists/*; \
   git clone --depth 1 https://github.com/zlib-ng/minizip-ng.git /tmp/minizip-ng; \
   cmake -S /tmp/minizip-ng -B /tmp/minizip-ng/build \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DMZ_FETCH_LIBS=OFF \
-    -DMZ_OPENSSL=ON \
-    -DMZ_PPMD=OFF \
-    -DMZ_LZMA=OFF; \
+    -DCMAKE_BUILD_TYPE=Release -DMZ_FETCH_LIBS=OFF \
+    -DMZ_OPENSSL=ON -DMZ_PPMD=OFF -DMZ_LZMA=OFF; \
   cmake --build /tmp/minizip-ng/build --parallel; \
   cmake --install /tmp/minizip-ng/build; \
   rm -rf /tmp/minizip-ng; \
   cp /usr/local/lib/pkgconfig/minizip.pc /usr/local/lib/pkgconfig/minizip-ng.pc; \
-  sed -i 's/^Name: minizip/Name: minizip-ng/' /usr/local/lib/pkgconfig/minizip-ng.pc; \
-  pkg-config --libs minizip-ng
+  sed -i 's/^Name: minizip/Name: minizip-ng/' /usr/local/lib/pkgconfig/minizip-ng.pc
 
-# ------------------------------------------------------------
-# zsign (build from source)
-# ------------------------------------------------------------
+# zsign
 RUN set -eux; \
   git clone --depth 1 https://github.com/zhlynn/zsign.git /tmp/zsign; \
   cd /tmp/zsign/build/linux; \
@@ -90,28 +52,15 @@ RUN set -eux; \
   make clean && make; \
   strip ../../bin/zsign; \
   install -m 0755 ../../bin/zsign /usr/local/bin/zsign; \
-  rm -rf /tmp/zsign; \
-  zsign --help | head -3
+  rm -rf /tmp/zsign
 
-# ------------------------------------------------------------
-# Theos (via official installer, run as non-root)
-# ------------------------------------------------------------
-ENV THEOS=/opt/theos
-RUN apt-get update && apt-get install -y --no-install-recommends sudo \
-  && rm -rf /var/lib/apt/lists/* \
-  && mkdir -p /opt/theos \
-  && chown vscode:vscode /opt/theos
-
-# ponytail: SDK download hits GH API rate-limits in CI; tolerate failure, user can run install-theos again at runtime
-RUN set -eux; \
-  su vscode -c 'curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos | bash' \
-  || test -d /opt/theos/makefiles
-
-RUN test -d /opt/theos
+# Strip Swift debug symbols to save ~500MB
+RUN find /usr/lib/swift -name "*.so" -exec strip --strip-debug {} \; 2>/dev/null || true; \
+    find /usr/bin -name "swift*" -type f -exec strip --strip-debug {} \; 2>/dev/null || true
 
 
 # ============================================================
-# Stage 2: Final image — only runtime deps + built artifacts
+# Stage 2: Final image — runtime only
 # ============================================================
 FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 
@@ -120,125 +69,82 @@ ENV PATH="/usr/local/bin:$PATH"
 ENV THEOS=/opt/theos
 ENV THEOS_MAKE_PATH=/opt/theos/makefiles
 
-# Runtime deps only
-RUN apt-get update && apt-get install -y --no-install-recommends \
-  # Swift runtime
-  binutils libedit2 libxml2-dev libsqlite3-0 \
-  libcurl4-openssl-dev tzdata \
-  libssl3 libncurses6 \
-  # zsign runtime
-  libplist-dev libzip-dev libminizip-dev \
-  # xtool / general
-  libfuse2 libz3-dev \
-  # iOS device
-  usbmuxd libimobiledevice-utils \
-  # Essentials
-  git curl ca-certificates python3-minimal \
-  # SSH server (for Cursor Remote-SSH support)
-  openssh-server \
-  && mkdir -p /var/run/sshd \
-  && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config \
-  && sed -i 's/#PubkeyAuthentication yes/PubkeyAuthentication yes/' /etc/ssh/sshd_config \
-  && rm -rf /var/lib/apt/lists/* \
-  && apt-get clean \
-  && rm -rf /tmp/* /var/tmp/*
+# Runtime deps — use runtime libs, not -dev packages where possible
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
+    # Swift runtime
+    binutils libedit2 libxml2 libsqlite3-0 \
+    libcurl4t64 tzdata libssl3 libncurses6 \
+    # zsign runtime
+    libplist-dev libzip-dev libminizip-dev \
+    # xtool
+    libfuse2 libz3-dev \
+    # iOS device
+    usbmuxd libimobiledevice-utils \
+    # Essentials
+    git curl ca-certificates python3-minimal \
+    # SSH (Cursor Remote-SSH)
+    openssh-server \
+    && mkdir -p /var/run/sshd \
+    && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config \
+    && sed -i 's/#PubkeyAuthentication yes/PubkeyAuthentication yes/' /etc/ssh/sshd_config \
+    && rm -rf /tmp/* /var/tmp/*
 
-# Copy built artifacts from builder
-COPY --from=builder /usr/local /usr/local
+# Copy Swift toolchain from official image (already compiled + optimized)
+COPY --from=builder /usr/lib/swift /usr/lib/swift
+COPY --from=builder /usr/libexec/swift /usr/libexec/swift
+COPY --from=builder /usr/bin/swift* /usr/bin/
+COPY --from=builder /usr/bin/sourcekit-lsp /usr/bin/
+COPY --from=builder /usr/share/swift /usr/share/swift
+
+# Copy our built tools
+COPY --from=builder /usr/local/bin/zsign /usr/local/bin/zsign
+COPY --from=builder /usr/local/lib/libminizip* /usr/local/lib/
 COPY --from=builder /opt/xtool /opt/xtool
-COPY --from=builder /opt/theos /opt/theos
 
-# Onboarding wizard + fetch-xcode
+# Theos — just create the directory; installed at first onboard
+# ponytail: moved out of build to avoid flaky GH API + saves ~500MB
+RUN mkdir -p /opt/theos && chown vscode:vscode /opt/theos
+
+# Onboarding + scripts
 COPY .devcontainer/onboard.sh /usr/local/bin/onboard
 COPY .devcontainer/configure-passwords.sh /usr/local/bin/configure-passwords
 COPY .devcontainer/fetch-xcode.sh /usr/local/bin/fetch-xcode
+COPY .devcontainer/install-theos.sh /usr/local/bin/install-theos
 COPY .devcontainer/profile-onboard.sh /etc/profile.d/99-swift-dev-onboard.sh
-RUN chmod +x /usr/local/bin/onboard /usr/local/bin/configure-passwords /usr/local/bin/fetch-xcode
+RUN chmod +x /usr/local/bin/onboard /usr/local/bin/configure-passwords \
+    /usr/local/bin/fetch-xcode /usr/local/bin/install-theos
 
 # Symlinks + permissions
 RUN ln -sf /opt/xtool/AppRun /usr/local/bin/xtool \
-  && chown -R vscode:vscode /opt/theos \
   && chown -R vscode:vscode /opt/xtool \
-  && chmod -R 755 /opt/theos
+  && ldconfig
 
-# ------------------------------------------------------------
-# code-server
-# ------------------------------------------------------------
+# code-server (single layer)
 RUN curl -fsSL https://code-server.dev/install.sh | sh \
+  && code-server --install-extension sswg.swift-lang \
+  && code-server --install-extension vadimcn.vscode-lldb \
   && rm -rf /tmp/* ~/.cache
 
-# Pre-install extensions
-RUN code-server --install-extension sswg.swift-lang \
-  && code-server --install-extension vadimcn.vscode-lldb \
-  && rm -rf /tmp/*
+# Config files + entrypoint (single layer)
+RUN mkdir -p /home/vscode/.config/code-server \
+  && printf 'bind-addr: 0.0.0.0:8080\nauth: password\npassword: CHANGE_ME_SET_CODE_SERVER_PASSWORD_ENV\ncert: false\n' \
+     > /home/vscode/.config/code-server/config.yaml \
+  && mkdir -p /home/vscode/.local/share/code-server/User \
+  && printf '{\n  "swift.path": "/usr/bin/swift",\n  "editor.formatOnSave": true,\n  "editor.fontSize": 14,\n  "editor.tabSize": 2,\n  "workbench.colorTheme": "Default Dark Modern",\n  "terminal.integrated.defaultProfile.linux": "bash",\n  "files.autoSave": "afterDelay",\n  "files.autoSaveDelay": 1000\n}\n' \
+     > /home/vscode/.local/share/code-server/User/settings.json \
+  && printf '#!/bin/bash\nset -e\nif [ $# -gt 0 ]; then exec "$@"; fi\n/usr/local/bin/configure-passwords --non-interactive\necho "================================================"\necho "  Swift iOS Dev Environment"\necho "  code-server: http://0.0.0.0:8080"\necho ""\necho "  Run: onboard"\necho "================================================"\nexec code-server --bind-addr 0.0.0.0:8080 --auth password\n' \
+     > /usr/local/bin/entrypoint.sh \
+  && chmod +x /usr/local/bin/entrypoint.sh \
+  && chown -R vscode:vscode /home/vscode
 
-# code-server config — password via env var at runtime
-RUN mkdir -p /home/vscode/.config/code-server && \
-  cat > /home/vscode/.config/code-server/config.yaml <<'EOF'
-bind-addr: 0.0.0.0:8080
-auth: password
-password: CHANGE_ME_SET_CODE_SERVER_PASSWORD_ENV
-cert: false
-EOF
-
-# VS Code settings
-RUN mkdir -p /home/vscode/.local/share/code-server/User && \
-  cat > /home/vscode/.local/share/code-server/User/settings.json <<'EOF'
-{
-  "swift.path": "/usr/local/bin/swift",
-  "lldb.library": "/usr/local/lib/swift/linux/liblldb.so",
-  "editor.formatOnSave": true,
-  "editor.fontSize": 14,
-  "editor.tabSize": 2,
-  "workbench.colorTheme": "Default Dark Modern",
-  "terminal.integrated.defaultProfile.linux": "bash",
-  "files.autoSave": "afterDelay",
-  "files.autoSaveDelay": 1000
-}
-EOF
-
-# Entrypoint — apply passwords from env, then start code-server
-RUN cat > /usr/local/bin/entrypoint.sh <<'EOF'
-#!/bin/bash
-set -e
-
-/usr/local/bin/configure-passwords --non-interactive
-
-echo "================================================"
-echo "  Swift iOS Dev Environment"
-echo "  code-server running at http://0.0.0.0:8080"
-echo ""
-echo "  First time? Open a terminal and run:"
-echo "    onboard"
-echo ""
-echo "  Or onboarding starts automatically on first login."
-echo "================================================"
-
-exec code-server --bind-addr 0.0.0.0:8080 --auth password
-EOF
-RUN chmod +x /usr/local/bin/entrypoint.sh
-
-# Fix ownership
-RUN chown -R vscode:vscode /home/vscode
-
-# ------------------------------------------------------------
 # Environment
-# ------------------------------------------------------------
-RUN { \
-    echo ''; \
-    echo '# Swift and iOS toolchain'; \
-    echo 'export PATH="/usr/local/bin:$PATH"'; \
-    echo 'export THEOS=/opt/theos'; \
-    echo 'export THEOS_MAKE_PATH=/opt/theos/makefiles'; \
-  } >> /etc/bash.bashrc
+RUN printf '\nexport PATH="/usr/local/bin:$PATH"\nexport THEOS=/opt/theos\nexport THEOS_MAKE_PATH=/opt/theos/makefiles\n' >> /etc/bash.bashrc
 
-# ------------------------------------------------------------
 # Sanity check
-# ------------------------------------------------------------
-RUN swift --version && xtool --help && which zsign && test -d /opt/theos
+RUN swift --version && xtool --help && which zsign
 
 EXPOSE 8080 2222
-
 USER vscode
-
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
