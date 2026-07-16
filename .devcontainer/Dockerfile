@@ -113,7 +113,10 @@ COPY .devcontainer/configure-passwords.sh /usr/local/bin/configure-passwords
 COPY .devcontainer/fetch-xcode.sh /usr/local/bin/fetch-xcode
 COPY .devcontainer/install-theos.sh /usr/local/bin/install-theos
 COPY .devcontainer/profile-onboard.sh /etc/profile.d/99-swift-dev-onboard.sh
-RUN chmod +x /usr/local/bin/onboard /usr/local/bin/configure-passwords \
+RUN sed -i 's/\r$//' /usr/local/bin/onboard /usr/local/bin/configure-passwords \
+    /usr/local/bin/fetch-xcode /usr/local/bin/install-theos \
+    /etc/profile.d/99-swift-dev-onboard.sh \
+  && chmod +x /usr/local/bin/onboard /usr/local/bin/configure-passwords \
     /usr/local/bin/fetch-xcode /usr/local/bin/install-theos
 
 # Symlinks + permissions
