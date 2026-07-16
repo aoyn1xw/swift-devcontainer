@@ -1,7 +1,8 @@
 {
   "name": "Swift iOS Dev Container (xtool + zsign + theos)",
   "build": {
-    "dockerfile": "Dockerfile"
+    "dockerfile": "Dockerfile",
+    "context": ".."
   },
   "hostRequirements": {
     "cpus": 4
