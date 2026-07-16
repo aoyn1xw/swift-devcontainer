@@ -102,8 +102,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends sudo \
   && mkdir -p /opt/theos \
   && chown vscode:vscode /opt/theos
 
+# ponytail: SDK download hits GH API rate-limits in CI; tolerate failure, user can run install-theos again at runtime
 RUN set -eux; \
-  su vscode -c 'curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos | bash'
+  su vscode -c 'curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos | bash' \
+  || test -d /opt/theos/makefiles
 
 RUN test -d /opt/theos
 
