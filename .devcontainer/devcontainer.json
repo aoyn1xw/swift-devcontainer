@@ -13,11 +13,6 @@
   "containerEnv": {
     "CODE_SERVER_PASSWORD": "${localEnv:CODE_SERVER_PASSWORD}"
   },
-  "features": {
-    "ghcr.io/devcontainers/features/sshd:1": {
-      "version": "latest"
-    }
-  },
   "customizations": {
     "vscode": {
       "extensions": [
@@ -31,7 +26,8 @@
       }
     }
   },
+  "forwardPorts": [8080, 22],
   "remoteUser": "vscode",
   "postAttachCommand": "onboard --if-needed",
-  "postCreateCommand": "configure-passwords --non-interactive && swift --version && xtool --help && echo 'THEOS='$THEOS"
+  "postCreateCommand": "swift --version && xtool --help && echo 'THEOS='$THEOS"
 }

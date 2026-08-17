@@ -4,6 +4,7 @@
 FROM swift:6.3.3-noble AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Build deps (cached layer)
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
@@ -16,7 +17,10 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     && true
 
 # xtool — extract AppImage
-ARG XTOOL_VERSION=latest
+ARG XTOOL_VERSION=1.17.0
+ARG MINIZIP_NG_COMMIT=dc8531deb704715fa57268d5e144f9eed7c8af66
+ARG ZSIGN_COMMIT=e803f870dc686e6161d00d9b22c425b8acdfacee
+ARG CODE_SERVER_VERSION=4.133.0
 RUN set -eux; \
   if [ "$XTOOL_VERSION" = "latest" ]; then \
     XTOOL_URL="https://github.com/xtool-org/xtool/releases/latest/download/xtool-$(uname -m).AppImage"; \
@@ -34,7 +38,8 @@ RUN set -eux; \
 
 # minizip-ng (needed by zsign)
 RUN set -eux; \
-  git clone --depth 1 https://github.com/zlib-ng/minizip-ng.git /tmp/minizip-ng; \
+  git clone https://github.com/zlib-ng/minizip-ng.git /tmp/minizip-ng; \
+  git -C /tmp/minizip-ng checkout --detach "$MINIZIP_NG_COMMIT"; \
   cmake -S /tmp/minizip-ng -B /tmp/minizip-ng/build \
     -DCMAKE_BUILD_TYPE=Release -DMZ_FETCH_LIBS=OFF \
     -DMZ_OPENSSL=ON -DMZ_PPMD=OFF -DMZ_LZMA=OFF; \
@@ -46,7 +51,8 @@ RUN set -eux; \
 
 # zsign
 RUN set -eux; \
-  git clone --depth 1 https://github.com/zhlynn/zsign.git /tmp/zsign; \
+  git clone https://github.com/zhlynn/zsign.git /tmp/zsign; \
+  git -C /tmp/zsign checkout --detach "$ZSIGN_COMMIT"; \
   cd /tmp/zsign/build/linux; \
   sed -i 's/$(MINIZIP_LIB)/$(MINIZIP_LIB) -lz/' Makefile; \
   make clean && make; \
@@ -125,22 +131,23 @@ RUN ln -sf /opt/xtool/AppRun /usr/local/bin/xtool \
   && ldconfig
 
 # code-server (single layer)
-RUN curl -fsSL https://code-server.dev/install.sh | sh \
+RUN curl --fail --silent --show-error --location --retry 3 --retry-all-errors https://code-server.dev/install.sh \
+    | VERSION="$CODE_SERVER_VERSION" sh \
   && code-server --install-extension sswg.swift-lang \
   && code-server --install-extension vadimcn.vscode-lldb \
-  && rm -rf /tmp/* ~/.cache
+  && rm -rf /tmp/* /root/.cache
 
-# Config files + entrypoint (single layer)
-RUN mkdir -p /home/vscode/.config/code-server \
-  && printf 'bind-addr: 0.0.0.0:8080\nauth: password\npassword: CHANGE_ME_SET_CODE_SERVER_PASSWORD_ENV\ncert: false\n' \
-     > /home/vscode/.config/code-server/config.yaml \
-  && mkdir -p /home/vscode/.local/share/code-server/User \
+# Config files and user-owned workspace defaults
+RUN install -d -m 700 -o vscode -g vscode /home/vscode/.config/code-server \
+  && install -d -o vscode -g vscode /home/vscode/.local/share/code-server/User \
   && printf '{\n  "swift.path": "/usr/bin/swift",\n  "editor.formatOnSave": true,\n  "editor.fontSize": 14,\n  "editor.tabSize": 2,\n  "workbench.colorTheme": "Default Dark Modern",\n  "terminal.integrated.defaultProfile.linux": "bash",\n  "files.autoSave": "afterDelay",\n  "files.autoSaveDelay": 1000\n}\n' \
      > /home/vscode/.local/share/code-server/User/settings.json \
-  && printf '#!/bin/bash\nset -e\nif [ $# -gt 0 ]; then exec "$@"; fi\n/usr/local/bin/configure-passwords --non-interactive\necho "================================================"\necho "  Swift iOS Dev Environment"\necho "  code-server: http://0.0.0.0:8080"\necho ""\necho "  Run: onboard"\necho "================================================"\nexec code-server --bind-addr 0.0.0.0:8080 --auth password\n' \
-     > /usr/local/bin/entrypoint.sh \
-  && chmod +x /usr/local/bin/entrypoint.sh \
-  && chown -R vscode:vscode /home/vscode
+  && chown -R vscode:vscode /home/vscode/.local/share/code-server \
+  && chmod 600 /home/vscode/.local/share/code-server/User/settings.json
+
+COPY .devcontainer/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh \
+  && chmod +x /usr/local/bin/entrypoint.sh
 
 # Environment
 RUN printf '\nexport PATH="/usr/local/bin:$PATH"\nexport THEOS=/opt/theos\nexport THEOS_MAKE_PATH=/opt/theos/makefiles\n' >> /etc/bash.bashrc
@@ -148,6 +155,6 @@ RUN printf '\nexport PATH="/usr/local/bin:$PATH"\nexport THEOS=/opt/theos\nexpor
 # Sanity check
 RUN swift --version && xtool --help && which zsign
 
-EXPOSE 8080 2222
-USER vscode
+EXPOSE 8080 22
+USER root
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

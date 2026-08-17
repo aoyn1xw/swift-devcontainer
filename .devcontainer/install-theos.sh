@@ -18,9 +18,10 @@ fi
 printf '%sInstalling Theos to %s...%s\n' "$CYAN" "$THEOS" "$RESET"
 printf '%sThis downloads the toolchain + SDKs (~400MB). May take a few minutes.%s\n\n' "$DIM" "$RESET"
 
-# ponytail: tolerate SDK download failure (GH API rate limits); core theos is what matters
-curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos | bash \
-  || true
+THEOS_INSTALLER_COMMIT="${THEOS_INSTALLER_COMMIT:-5280bd038207e14f8bd76f5417aa2fe641c03228}"
+curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
+  "https://raw.githubusercontent.com/theos/theos/${THEOS_INSTALLER_COMMIT}/bin/install-theos" \
+  | bash
 
 if [[ -d "$THEOS/makefiles" ]]; then
   printf '\n%s✓ Theos installed successfully%s\n' "$GREEN" "$RESET"

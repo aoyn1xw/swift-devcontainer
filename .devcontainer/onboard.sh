@@ -149,7 +149,21 @@ is_xtool_configured() {
 }
 
 is_onboarding_complete() {
-  [[ -f "$MARKER_FILE" ]] && is_code_server_password_configured
+  [[ -f "$MARKER_FILE" ]] || return 1
+  is_code_server_password_configured || return 1
+  swift --version >/dev/null 2>&1 || return 1
+  xtool --help >/dev/null 2>&1 || return 1
+  zsign -h >/dev/null 2>&1
+}
+
+count_selected() {
+  local total=0 p
+  for p in "$@"; do
+    if (( p )); then
+      (( total += 1 ))
+    fi
+  done
+  printf '%s\n' "$total"
 }
 
 mark_complete() {
@@ -166,7 +180,7 @@ step_security() {
   section "Security Setup"
 
   if declare -F configure_passwords >/dev/null 2>&1; then
-    if ! configure_passwords --interactive "true"; then
+    if ! configure_passwords --interactive --required; then
       warn "Password setup incomplete. Run ${CYAN}onboard${RESET} again to continue."
       return 1
     fi
@@ -204,7 +218,12 @@ step_verify_toolchain() {
     warn "Theos not installed (run ${CYAN}install-theos${RESET})"
   fi
 
-  $all_ok && success "All core tools ready" || warn "Some tools missing"
+  if [[ "$all_ok" == true ]]; then
+    success "All core tools ready"
+    return 0
+  fi
+  warn "Some tools missing"
+  return 1
 }
 
 step_install_theos() {
@@ -384,7 +403,7 @@ run_onboarding() {
   save_choices
 
   local step=0 total=0
-  for p in "${PICKED[@]}"; do (( p )) && ((total++)); done
+  total="$(count_selected "${PICKED[@]}")"
 
   if (( total == 0 )); then
     info "Nothing selected. Run ${CYAN}onboard${RESET} anytime to configure."
@@ -393,35 +412,39 @@ run_onboarding() {
 
   # Run selected steps
   if [[ "${PICKED[0]}" == "1" ]]; then
-    ((step++))
-    step_security || true
+    (( step += 1 ))
+    step_security || return 1
   fi
 
   if [[ "${PICKED[1]}" == "1" ]]; then
-    ((step++))
-    step_verify_toolchain
+    (( step += 1 ))
+    step_verify_toolchain || return 1
   fi
 
   if [[ "${PICKED[2]}" == "1" ]]; then
-    ((step++))
+    (( step += 1 ))
     step_install_theos
   fi
 
   if [[ "${PICKED[3]}" == "1" ]]; then
-    ((step++))
+    (( step += 1 ))
     step_fetch_xcode
   fi
 
   if [[ "${PICKED[4]}" == "1" ]]; then
-    ((step++))
+    (( step += 1 ))
     step_xtool_setup
   fi
 
   if [[ "${PICKED[5]}" == "1" ]]; then
-    ((step++))
+    (( step += 1 ))
     step_next_steps
   fi
 
+  if ! is_code_server_password_configured; then
+    warn "A valid code-server password is required before setup can complete."
+    return 1
+  fi
   step_finish
 }
 
@@ -430,8 +453,12 @@ run_quick() {
   info "Quick setup: passwords + toolchain verification"
   divider
 
-  step_security || true
-  step_verify_toolchain
+  step_security || return 1
+  step_verify_toolchain || return 1
+  if ! is_code_server_password_configured; then
+    warn "A valid code-server password is required before quick setup can complete."
+    return 1
+  fi
   mark_complete
   printf '\n  %sDone.%s Run %sonboard%s for full interactive setup.\n\n' "$GREEN" "$RESET" "$CYAN" "$RESET"
 }
@@ -491,4 +518,6 @@ EOF
   esac
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  main "$@"
+fi

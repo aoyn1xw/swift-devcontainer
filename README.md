@@ -16,7 +16,7 @@ Build and sign iOS apps on Linux — no Mac, no Xcode.
 | Swift 6.3.3 | Compile Swift packages and iOS-targeted apps |
 | xtool | Cross-compile Swift for iOS on Linux |
 | zsign | Sign IPAs without Xcode |
-| Theos | iOS tweak and app development |
+| Theos installer | iOS tweak and app development; installed on demand during onboarding |
 | fetch-xcode | Download Xcode.xip from Apple CDN (via xcodereleases.com) |
 
 ---
@@ -34,9 +34,9 @@ cp .env.example .env   # edit CODE_SERVER_PASSWORD
 docker compose up -d
 ```
 
-Port `2222` is also mapped for SSH access (used by Cursor Remote-SSH). Both ports are included in `docker-compose.yml` by default.
+Port `2222` is mapped to the container's SSH port `22` for Cursor Remote-SSH. Compose starts SSH only after a valid password is supplied.
 
-> **Note:** `CODE_SERVER_PASSWORD` must be set in `.env` (or as an environment variable) before starting. Startup will fail clearly if it is not set — the image no longer ships with a default `changeme` password baked in.
+> **Security requirement:** `CODE_SERVER_PASSWORD` must be set in `.env` (or as an environment variable) before starting. It must be at least 8 characters and must not be a known default. The container fails closed instead of starting code-server with a placeholder password.
 
 Verify everything works:
 ```sh
@@ -45,7 +45,7 @@ swift --version && xtool --help && zsign -h && ls $THEOS
 
 ### First-time onboarding
 
-On first launch, an interactive guide walks you through setup step by step (passwords → Swift check → `xtool setup` → next commands). It starts automatically when you open a terminal or attach to the dev container.
+On first interactive shell or attach, an interactive guide walks you through setup step by step (passwords → Swift check → optional Theos/Xcode/SDK setup → next commands). Non-interactive hooks print instructions rather than blocking automation. The core onboarding marker is written only after a valid password and core tools are available.
 
 ```sh
 onboard              # run the full walkthrough
@@ -64,7 +64,7 @@ fetch-xcode --version 16.3  # specific version
 
 See the [xtool Linux install guide](https://xtool.sh/documentation/xtooldocs/installation-linux) for more details.
 
-**Passwords:** set `CODE_SERVER_PASSWORD` in `.env` (Docker Compose) or your shell before opening the dev container. Onboarding also prompts you to replace the default `changeme` password and optionally set an SSH password.
+**Passwords:** set a strong `CODE_SERVER_PASSWORD` in `.env` (Docker Compose) or your shell before opening the dev container. Onboarding rejects known defaults and optionally lets you set an SSH password. Password configuration is stored with restrictive file permissions.
 
 Set `SKIP_ONBOARDING=1` to disable auto-start.
 
@@ -87,13 +87,9 @@ Copy `.devcontainer/` into any repo and open a Codespace — your project builds
 **Blank screen behind dev tunnels** — configure code-server with your proxy domain:
 
 ```bash
-docker compose exec swift-dev bash -c "mkdir -p /home/vscode/.config/code-server && cat > /home/vscode/.config/code-server/config.yaml << 'EOF'
-bind-addr: 0.0.0.0:8080
-auth: password
-password: changeme
-cert: false
-proxy-domain: your-tunnel-domain.devtunnels.ms
-EOF"
+docker compose exec swift-dev bash -c 'configure-passwords --interactive'
+# Configure proxy-domain through your code-server configuration mechanism,
+# preserving the existing password and never using a known default.
 docker compose restart
 ```
 
