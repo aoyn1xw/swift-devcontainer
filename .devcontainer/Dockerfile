@@ -90,6 +90,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     usbmuxd libimobiledevice-utils \
     # Essentials
     git curl ca-certificates python3-minimal \
+    # compose healthcheck uses ss(8) from iproute2
+    iproute2 \
     # SSH (Cursor Remote-SSH)
     openssh-server \
     && mkdir -p /var/run/sshd \

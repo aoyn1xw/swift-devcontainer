@@ -12,7 +12,9 @@ export CODE_SERVER_CONFIG="${CODE_SERVER_CONFIG:-/home/vscode/.config/code-serve
 install -d -m 700 -o vscode -g vscode /home/vscode/.config/code-server
 install -d -o vscode -g vscode /home/vscode/project
 
-/usr/local/bin/configure-passwords --non-interactive
+# Run as vscode so config.yaml / state files are not created root-owned
+runuser -u vscode -- env CODE_SERVER_CONFIG="$CODE_SERVER_CONFIG" HOME="$HOME" \
+  /usr/local/bin/configure-passwords --non-interactive
 
 if [[ "${START_SSHD:-0}" == "1" ]]; then
   install -d -m 755 /run/sshd

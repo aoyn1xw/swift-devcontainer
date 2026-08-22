@@ -206,7 +206,7 @@ step_verify_toolchain() {
     fail "xtool not found"; all_ok=false
   fi
 
-  if zsign -h >/dev/null 2>&1; then
+  if command -v zsign >/dev/null 2>&1; then
     success "zsign available"
   else
     fail "zsign not found"; all_ok=false
@@ -363,7 +363,7 @@ show_status() {
   else fail "Swift"; fi
 
   if xtool --help >/dev/null 2>&1; then success "xtool"; else fail "xtool"; fi
-  if zsign -h >/dev/null 2>&1; then success "zsign"; else fail "zsign"; fi
+  if command -v zsign >/dev/null 2>&1; then success "zsign"; else fail "zsign"; fi
   if [[ -d "${THEOS:-/opt/theos}/makefiles" ]]; then success "Theos"; else warn "Theos not installed (run ${CYAN}install-theos${RESET})"; fi
 
   echo
