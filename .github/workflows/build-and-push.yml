@@ -55,7 +55,9 @@ jobs:
 
       - name: Verify Swift version
         run: |
-          docker run --rm swift-devcontainer:test-${{ github.sha }} swift --version | grep -F 'Swift version 6.4.0'
+          swift_version="$(docker run --rm swift-devcontainer:test-${{ github.sha }} swift --version)"
+          printf '%s\n' "$swift_version"
+          grep -Eq '^Swift version 6[.]4([.]0)?([[:space:]]|$)' <<< "$swift_version"
 
       - name: Verify xtool help
         run: docker run --rm swift-devcontainer:test-${{ github.sha }} xtool --help
