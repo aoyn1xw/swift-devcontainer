@@ -1,7 +1,7 @@
 # ============================================================
 # Stage 1: Builder — compile zsign + minizip-ng + extract xtool
 # ============================================================
-FROM swift:6.3.3-noble AS builder
+FROM swift:6.4.0-noble AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -17,10 +17,9 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     && true
 
 # xtool — extract AppImage
-ARG XTOOL_VERSION=1.17.0
+ARG XTOOL_VERSION=1.21.0
 ARG MINIZIP_NG_COMMIT=dc8531deb704715fa57268d5e144f9eed7c8af66
 ARG ZSIGN_COMMIT=e803f870dc686e6161d00d9b22c425b8acdfacee
-ARG CODE_SERVER_VERSION=4.133.0
 RUN set -eux; \
   if [ "$XTOOL_VERSION" = "latest" ]; then \
     XTOOL_URL="https://github.com/xtool-org/xtool/releases/latest/download/xtool-$(uname -m).AppImage"; \
@@ -69,6 +68,8 @@ RUN find /usr/lib/swift -name "*.so" -exec strip --strip-debug {} \; 2>/dev/null
 # Stage 2: Final image — runtime only
 # ============================================================
 FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
+
+ARG CODE_SERVER_VERSION=4.133.0
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PATH="/usr/local/bin:$PATH"

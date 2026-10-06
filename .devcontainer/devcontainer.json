@@ -20,8 +20,7 @@
         "vadimcn.vscode-lldb"
       ],
       "settings": {
-        "swift.path": "/usr/local/bin/swift",
-        "lldb.library": "/usr/local/lib/swift/linux/liblldb.so",
+        "swift.path": "/usr/bin/swift",
         "editor.formatOnSave": true
       }
     }
