@@ -69,7 +69,7 @@ RUN find /usr/lib/swift -name "*.so" -exec strip --strip-debug {} \; 2>/dev/null
 # ============================================================
 FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 
-ARG CODE_SERVER_VERSION=4.133.0
+ARG CODE_SERVER_VERSION=4.136.2
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PATH="/usr/local/bin:$PATH"
